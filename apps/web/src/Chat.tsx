@@ -35,6 +35,8 @@ export default function Chat({ day }: { day: string }) {
 
   return (
     <section className="chat">
+      <h2>Chat</h2>
+      <p className="muted">Conte o que comeu e treinou — o registro cai no diário do dia.</p>
       <p className="mock-note">
         <Bot size={16} aria-hidden />
         Resposta simulada (mock) — nesta fase o LLM ainda não está integrado. O registro no

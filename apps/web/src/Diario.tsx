@@ -55,6 +55,7 @@ export default function Diario({ day }: { day: string }) {
   return (
     <section className="diario">
       <h2>Diário de {day}</h2>
+      <p className="muted">Totais do dia, refeições e treino — edite à vontade.</p>
       {error && <p className="error">{error}</p>}
       {!report && !error && <p>Carregando…</p>}
       {report && (

@@ -1,8 +1,12 @@
 /* Design system — referência: fitness app dark + neon (#F3FF47).
-   Harmonia: os neutros são tintados para o oliva do accent (hue ~68°),
-   em vez de cinzas puros — mesma ambiência do fundo da referência.
+   Harmonia: os neutros são tintados para o oliva do accent (hue ~68°).
    Amarelo neon validado no escuro: contraste 17:1 (banda de luminosidade
-   dispensada por ser série única da marca, com tooltip + tabela de apoio). */
+   dispensada por ser série única da marca, com tooltip + tabela de apoio).
+
+   ESPAÇAMENTO: grade de 4px com escada ~1,5x — 4 · 8 · 12 · 16 · 24 · 32 · 48.
+   Todo gap/padding/margin usa APENAS os tokens --s*. Raios: 8 · 12 · 16.
+   Ritmo vertical: dentro do bloco --s2/--s3, entre componentes --s4/--s5,
+   entre subseções --s6, do cabeçalho para o conteúdo --s6. */
 :root {
   --accent: #f3ff47;
   --accent-ink: #101107;
@@ -17,6 +21,16 @@
   --text-2: #c9ccb4;
   --muted: #8e917c;
   --error: #ff8574;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --r1: 8px;
+  --r2: 12px;
+  --r3: 16px;
   color-scheme: dark;
 }
 
@@ -38,63 +52,79 @@ body {
 .app {
   max-width: 860px;
   margin: 0 auto;
-  padding: 20px 16px 32px;
+  padding: var(--s6) var(--s4) var(--s7);
 }
 
-/* ---- tipografia (hierarquia única do app) ---- */
+/* ---- cabeçalho ---- */
 h1 {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  margin: 4px 0 16px;
+  margin: 0 0 var(--s5);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s3);
 }
 
 h1 .logo {
   color: var(--accent);
 }
 
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin-bottom: var(--s6);
+}
+
+/* ---- tipografia das telas (hierarquia única) ---- */
 h2 {
   font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: -0.01em;
-  margin: 0 0 4px;
+  margin: 0 0 var(--s2);
 }
 
 h3 {
   font-size: 0.95rem;
   font-weight: 600;
-  margin: 20px 0 10px;
+  margin: var(--s6) 0 var(--s3);
 }
 
 .muted {
   color: var(--muted);
   font-size: 0.8rem;
-  margin: 0 0 14px;
+  margin: 0 0 var(--s5);
 }
 
 .empty {
   color: var(--text-2);
   font-size: 0.85rem;
+  margin: 0 0 var(--s4);
 }
 
 .error {
   color: var(--error);
   font-size: 0.85rem;
+  margin: 0 0 var(--s4);
+}
+
+section {
+  margin: 0;
 }
 
 /* ---- botões (pill, como na referência) ---- */
 button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--s2);
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 9px 16px;
+  padding: var(--s2) var(--s4);
   cursor: pointer;
   font-family: inherit;
   font-size: 0.85rem;
@@ -131,8 +161,7 @@ form button:hover:not(:disabled) {
 
 nav {
   display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: var(--s2);
 }
 
 nav button.active {
@@ -144,17 +173,16 @@ nav button.active {
 
 .day-picker {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--s1);
   align-items: center;
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 4px;
-  margin-bottom: 16px;
+  padding: var(--s1);
 }
 
 .day-picker button {
-  padding: 6px 8px;
+  padding: var(--s1) var(--s2);
   border: none;
   background: transparent;
   color: var(--text-2);
@@ -163,7 +191,7 @@ nav button.active {
 .day-picker input {
   border: none;
   background: transparent;
-  padding: 4px 2px;
+  padding: var(--s1);
 }
 
 input,
@@ -172,39 +200,37 @@ textarea {
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 9px 12px;
+  border-radius: var(--r2);
+  padding: var(--s2) var(--s3);
   font-family: inherit;
   font-size: 0.85rem;
-}
-
-section {
-  margin-bottom: 20px;
 }
 
 /* ---- chat ---- */
 .mock-note {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s2);
   color: var(--muted);
   font-size: 0.8rem;
   border: 1px dashed var(--line);
-  border-radius: 12px;
-  padding: 10px 12px;
+  border-radius: var(--r2);
+  padding: var(--s3) var(--s4);
+  margin: 0 0 var(--s4);
 }
 
 .messages {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--s2);
+  min-height: 280px;
+  margin-bottom: var(--s4);
 }
 
 .msg {
   margin: 0;
-  padding: 12px 14px;
-  border-radius: 16px;
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r3);
   white-space: pre-wrap;
   font-family: inherit;
   font-size: 0.88rem;
@@ -215,52 +241,52 @@ section {
   align-self: flex-end;
   background: var(--accent);
   color: var(--accent-ink);
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: var(--s1);
   font-weight: 500;
 }
 
 .msg.bot {
   align-self: flex-start;
   background: var(--surface);
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: var(--s1);
 }
 
 .chat form {
   display: flex;
-  gap: 8px;
+  gap: var(--s2);
   align-items: flex-end;
 }
 
 .chat textarea {
   flex: 1;
   resize: vertical;
-  border-radius: 16px;
+  border-radius: var(--r3);
 }
 
 /* ---- stat tiles (como os Health Metrics da referência) ---- */
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-  margin: 12px 0 4px;
+  gap: var(--s3);
+  margin: 0 0 var(--s5);
 }
 
 .tile {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 12px 14px;
+  border-radius: var(--r3);
+  padding: var(--s4);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--s1);
 }
 
 .tile-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: var(--s2);
+  margin-bottom: var(--s2);
 }
 
 .tile-label {
@@ -273,8 +299,8 @@ section {
   display: inline-flex;
   color: var(--accent);
   background: var(--surface-2);
-  border-radius: 8px;
-  padding: 5px;
+  border-radius: var(--r1);
+  padding: var(--s1);
 }
 
 .tile-value {
@@ -296,7 +322,7 @@ table {
   border-spacing: 0;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--r3);
   overflow: hidden;
   font-size: 0.85rem;
 }
@@ -312,7 +338,7 @@ th {
 
 th,
 td {
-  padding: 10px 12px;
+  padding: var(--s3);
   border-bottom: 1px solid var(--line);
   font-variant-numeric: tabular-nums;
 }
@@ -325,7 +351,7 @@ td button {
   background: transparent;
   border: none;
   color: var(--muted);
-  padding: 4px;
+  padding: var(--s1);
 }
 
 td button:hover {
@@ -334,9 +360,9 @@ td button:hover {
 
 .add-form {
   display: flex;
-  gap: 8px;
+  gap: var(--s2);
   flex-wrap: wrap;
-  margin: 12px 0 4px;
+  margin: var(--s3) 0 0;
 }
 
 .add-form input[type='number'] {
@@ -344,13 +370,22 @@ td button:hover {
 }
 
 /* ---- gráfico ---- */
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--text-2);
+  font-size: 0.85rem;
+  margin-bottom: var(--s4);
+}
+
 .chart {
   margin: 0;
   position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 12px;
+  border-radius: var(--r3);
+  padding: var(--s4);
 }
 
 .chart svg {
@@ -394,12 +429,12 @@ td button:hover {
 
 .chart .tooltip {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: var(--s4);
+  right: var(--s4);
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 6px 10px;
+  border-radius: var(--r1);
+  padding: var(--s2) var(--s3);
   font-size: 0.8rem;
   color: var(--text-2);
 }
@@ -407,15 +442,6 @@ td button:hover {
 details summary {
   color: var(--muted);
   cursor: pointer;
-  margin: 10px 0 8px;
+  margin: var(--s3) 0 var(--s2);
   font-size: 0.8rem;
-}
-
-.filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-2);
-  font-size: 0.85rem;
-  margin-bottom: 12px;
 }

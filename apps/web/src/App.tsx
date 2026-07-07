@@ -37,30 +37,36 @@ export default function App() {
           <Dumbbell size={24} className="logo" aria-hidden />
           Marombas Tracker
         </h1>
-        <nav aria-label="abas">
-          {TABS.map(({ name, icon: Icon }) => (
-            <button key={name} className={name === tab ? 'active' : ''} onClick={() => setTab(name)}>
-              <Icon size={16} aria-hidden />
-              {name}
-            </button>
-          ))}
-        </nav>
-        {tab !== 'Evolução' && (
-          <div className="day-picker">
-            <button aria-label="dia anterior" onClick={() => shiftDay(-1)}>
-              <ChevronLeft size={18} aria-hidden />
-            </button>
-            <input
-              aria-label="dia"
-              type="date"
-              value={day}
-              onChange={(e) => e.target.value && setDay(e.target.value)}
-            />
-            <button aria-label="próximo dia" onClick={() => shiftDay(1)}>
-              <ChevronRight size={18} aria-hidden />
-            </button>
-          </div>
-        )}
+        <div className="toolbar">
+          <nav aria-label="abas">
+            {TABS.map(({ name, icon: Icon }) => (
+              <button
+                key={name}
+                className={name === tab ? 'active' : ''}
+                onClick={() => setTab(name)}
+              >
+                <Icon size={16} aria-hidden />
+                {name}
+              </button>
+            ))}
+          </nav>
+          {tab !== 'Evolução' && (
+            <div className="day-picker">
+              <button aria-label="dia anterior" onClick={() => shiftDay(-1)}>
+                <ChevronLeft size={18} aria-hidden />
+              </button>
+              <input
+                aria-label="dia"
+                type="date"
+                value={day}
+                onChange={(e) => e.target.value && setDay(e.target.value)}
+              />
+              <button aria-label="próximo dia" onClick={() => shiftDay(1)}>
+                <ChevronRight size={18} aria-hidden />
+              </button>
+            </div>
+          )}
+        </div>
       </header>
       {tab === 'Chat' && <Chat day={day} />}
       {tab === 'Diário' && <Diario day={day} />}
