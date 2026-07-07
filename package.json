@@ -1,0 +1,14 @@
+{
+  "name": "marombas-senai",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "dev:web": "npm --workspace apps/web run dev",
+    "test:web": "npm --workspace apps/web run test:coverage",
+    "gate": "python scripts/gate.py"
+  }
+}

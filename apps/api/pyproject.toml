@@ -1,0 +1,10 @@
+[project]
+name = "api"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+addopts = "--cov=app --cov-report=term-missing --cov-fail-under=95"
+
+[tool.coverage.run]
+omit = ["tests/*"]

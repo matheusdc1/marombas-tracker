@@ -1,0 +1,3 @@
+#!/bin/sh
+# Gate de qualidade (500 LOC/arquivo + cobertura 95%) — bloqueia o commit se reprovar.
+exec python scripts/gate.py
