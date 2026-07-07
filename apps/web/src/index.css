@@ -1,0 +1,276 @@
+/* Tokens da paleta de referência da skill dataviz (modo escuro, validada). */
+:root {
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --baseline: #383835;
+  --border: rgba(255, 255, 255, 0.1);
+  --series-1: #3987e5;
+  --error: #e66767;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  margin: 8px 0;
+}
+
+nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+button {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+nav button.active {
+  border-color: var(--series-1);
+  background: rgba(57, 135, 229, 0.15);
+}
+
+.day-picker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+input,
+select,
+textarea {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+section {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.empty {
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--error);
+}
+
+.mock-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+/* chat */
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.msg {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.92rem;
+  max-width: 85%;
+}
+
+.msg.user {
+  align-self: flex-end;
+  background: rgba(57, 135, 229, 0.2);
+}
+
+.msg.bot {
+  align-self: flex-start;
+  background: var(--page);
+  border: 1px solid var(--border);
+}
+
+.chat form {
+  display: flex;
+  gap: 8px;
+}
+
+.chat textarea {
+  flex: 1;
+  resize: vertical;
+}
+
+/* tabelas */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 500;
+  text-align: left;
+}
+
+th,
+td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--grid);
+  font-variant-numeric: tabular-nums;
+}
+
+.add-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0 20px;
+}
+
+.add-form input[type='number'] {
+  width: 90px;
+}
+
+/* stat tiles */
+.tiles {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.tile {
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  min-width: 110px;
+}
+
+.tile-value {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.tile-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* gráfico */
+.chart {
+  margin: 0;
+  position: relative;
+}
+
+.chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart .grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+
+.chart .baseline {
+  stroke: var(--baseline);
+  stroke-width: 1;
+}
+
+.chart .crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.chart .series-line {
+  stroke: var(--series-1);
+  stroke-width: 2;
+}
+
+.chart .series-dot {
+  fill: var(--series-1);
+  stroke: var(--surface-1);
+  stroke-width: 2;
+}
+
+.chart .tick {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .tooltip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+details summary {
+  color: var(--muted);
+  cursor: pointer;
+  margin: 8px 0;
+}

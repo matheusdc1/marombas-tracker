@@ -9,10 +9,13 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    globals: true,
+    restoreMocks: true,
+    unstubGlobals: true,
     coverage: {
       provider: 'v8',
       include: ['src/**'],
-      exclude: ['src/main.tsx', 'src/**/*.test.*'],
+      exclude: ['src/main.tsx', 'src/**/*.test.*', 'src/__tests__/**'],
       thresholds: { lines: 95, functions: 95, branches: 95, statements: 95 },
     },
   },
