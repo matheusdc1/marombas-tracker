@@ -1,89 +1,163 @@
-# Marombas Tracker
+# 🏋️ Marombas Tracker
 
-Tracker de dieta e treino para marombas: você descreve em linguagem natural o que comeu
-e o treino que fez, e o sistema calcula calorias/macronutrientes (base: **tabela TACO**)
-e registra o treino em tabelas com progressão de cargas.
+Tracker de dieta e treino para marombas: você descreve **em linguagem natural** o que comeu
+e o treino que fez, e o sistema calcula calorias/macronutrientes (base: **tabela TACO**) e
+registra o treino em tabelas com progressão de cargas e gráfico de evolução.
 
 > Projeto individual da Avaliação Intermediária de IA Generativa (SENAI).
-> **Nesta fase não há LLM integrado** — onde a IA atuará (interpretar a mensagem do
-> usuário via MCP + adapter GLM/DeepSeek), as respostas são simuladas (mock).
+> **Nesta fase não há LLM integrado** — onde a IA atuará (interpretar a mensagem via MCP +
+> adapter GLM/DeepSeek), há um **parser mock por regex** que simula a resposta estruturada.
 
 ## O problema e a solução
 
-Quem treina e controla dieta precisa de: consulta à tabela TACO, cálculo de macros,
-diário por dia (com calendário), registro de treino (exercícios, séries, cargas, reps)
-e acompanhamento de progressão de carga (volume total em kg) num gráfico.
+Quem treina e controla dieta faz hoje 3 tarefas manuais e chatas: procurar cada alimento na
+tabela TACO e calcular macros por regra de três; anotar treino (exercícios, séries, cargas,
+reps) em planilha; e acompanhar se a carga está progredindo. O Marombas Tracker junta tudo
+num fluxo só:
 
-Fluxo alvo (com IA, fase futura): o usuário escreve
-*"hoje comi 200g de frango, 100g de arroz cru, 30g de azeite... treinei fullbody,
-2 séries de supino 30kg de cada lado 10 reps..."* e o LLM (via MCP) estrutura isso em
-refeições + exercícios; o backend consulta a TACO e persiste tudo em SQLite.
+```
+"hoje comi 200g de frango, 100g de arroz cru, 30g de azeite, 350ml de leite e 30g de whey.
+ treinei fullbody, 2 séries de supino reto 30kg de cada lado 10 reps, ..."
+        │
+        ▼  (fase atual: parser mock por regex — fase final: LLM via MCP)
+   refeições estruturadas + séries estruturadas
+        │
+        ▼
+   SQLite (TACO + diário + treino)  →  relatório do dia, calendário, gráfico de volume
+```
+
+### Telas
+
+| Aba | O que tem |
+|-----|-----------|
+| **Chat** | conversa em linguagem natural; a resposta (simulada) mostra o que foi registrado, com kcal e macros por item |
+| **Diário** | seletor de dia (calendário + setas), tiles de totais (kcal/proteína/carbo/gordura/volume), tabela de refeições e tabela de treino com adicionar/remover manual |
+| **Evolução** | gráfico de linha do volume de treino por dia (volume = séries × reps × carga), filtro por exercício, recorde, tabela de dados acessível |
+
+### Como a IA entra no futuro
+
+O endpoint `POST /api/chat` hoje chama `app/parser.py` (regex). Na fase final, esse módulo
+será substituído por uma chamada a um LLM (GLM/DeepSeek ou outro adapter) via **MCP**, que
+devolverá o mesmo formato estruturado `{meals, sets, unmatched}` — o resto do sistema
+(banco, relatórios, UI) já está pronto para isso. O contrato mock = contrato real é
+deliberado: trocar o parser não toca em mais nada.
 
 ## Stack e arquitetura
 
-- **Monorepo**: `apps/api` (Python + FastAPI + SQLite) e `apps/web` (React + Vite + TypeScript).
-- npm workspaces simples — **sem Turborepo**: com um único app JS e um app Python,
-  o Turborepo só adicionaria configuração sem ganho real de cache/pipeline.
-- Testes: `pytest` + `pytest-cov` no backend, `vitest` + Testing Library no frontend.
+- **Monorepo npm workspaces**: `apps/api` (Python 3.12 + FastAPI + SQLite stdlib) e
+  `apps/web` (React 19 + Vite + TypeScript).
+- **SQLite** (recomendação do professor): um arquivo, zero configuração, seed automático.
+- Testes: `pytest` + `pytest-cov` no backend; `vitest` + Testing Library no frontend.
 
 ```
 apps/
-  api/          # FastAPI (app/) + testes (tests/)
-  web/          # React + Vite (src/) + testes co-localizados (*.test.tsx)
-scripts/
-  gate.py       # gate de qualidade (ver abaixo)
-.githooks/      # pre-commit e pre-push que executam o gate
+  api/
+    app/            # db.py, parser.py (mock do LLM), routes.py, taco_seed.py
+    tests/
+  web/
+    src/            # App, Chat, Diario, Evolucao, LineChart + testes co-localizados
+scripts/gate.py     # gate de qualidade (ver abaixo)
+.githooks/          # pre-commit e pre-push executam o gate
 ```
+
+### API
+
+| Método | Rota | O que faz |
+|--------|------|-----------|
+| GET | `/api/foods?q=` | busca na tabela TACO (54 alimentos curados) |
+| POST | `/api/foods` | cadastra alimento custom (ex.: hipercalórico) |
+| GET | `/api/log/{dia}` | relatório do dia: refeições + treino + totais |
+| POST/DELETE | `/api/log/{dia}/meals`, `/api/meals/{id}` | CRUD de refeições |
+| POST/DELETE | `/api/log/{dia}/sets`, `/api/sets/{id}` | CRUD de séries |
+| GET | `/api/progress?exercise=` | volume (kg) por dia, p/ o gráfico |
+| POST | `/api/chat` | **mock do LLM**: interpreta a mensagem, registra e responde |
 
 ## Gate de qualidade (harness)
 
-`scripts/gate.py` roda automaticamente no **pre-commit** e no **pre-push**
-(hooks versionados em `.githooks/`, ativados por `git config core.hooksPath .githooks`
-— o `npm install` na raiz já faz isso via script `prepare`). Se qualquer regra falhar,
-o commit/push é **bloqueado**:
+`scripts/gate.py` roda automaticamente no **pre-commit** e no **pre-push** (hooks
+versionados em `.githooks/`, ativados pelo script `prepare` do `npm install`). Reprovou,
+**bloqueia**:
 
 1. **Máx. 500 LOC produtivas por arquivo** (linhas não-vazias).
-2. **Linhas de teste não contam** — arquivos de teste (`test_*.py`, `*.test.tsx`,
-   pastas `tests/`/`__tests__/`) são ignorados; em arquivos mistos, blocos de teste
-   inline (funções `test_*`/classes `Test*` em Python, `describe/it/test` em JS/TS)
+2. **Linhas de teste não contam** — arquivos de teste são ignorados por inteiro e testes
+   inline (funções `test_*`/classes `Test*` em Python, blocos `describe/it/test` em JS/TS)
    são descontados da contagem.
 3. **Cobertura mínima de 95%** no backend (`--cov-fail-under=95`) e no frontend
-   (thresholds do vitest).
+   (thresholds do vitest em linhas, funções e branches). Hoje: **100% nos dois**.
 
-Rodar manualmente: `npm run gate` (ou `python scripts/gate.py`).
-Só a checagem de LOC: `python scripts/gate.py --loc-only`.
-Auto-teste da lógica de contagem: `python scripts/gate.py --self-check`.
+Manual: `npm run gate` · só LOC: `python scripts/gate.py --loc-only` ·
+auto-teste do contador: `python scripts/gate.py --self-check`.
 
 ## Como rodar
 
 ```sh
-# raiz — instala deps do frontend e ativa os hooks do gate
-npm install
+npm install                 # deps do frontend + ativa os hooks do gate
 
-# backend
-cd apps/api
-python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\python -m uvicorn app.main:app --reload --port 8000
+# backend (uma vez): criar venv e instalar deps
+cd apps/api && python -m venv .venv && .venv\Scripts\pip install -r requirements.txt && cd ..\..
 
-# frontend (outro terminal, na raiz)
-npm run dev:web   # http://localhost:5173 (proxy /api -> :8000)
+npm run dev:api             # FastAPI em http://localhost:8000
+npm run dev:web             # Vite em http://localhost:5173 (proxy /api -> :8000)
 ```
+
+Endpoint público (avaliação): expor o frontend com `ngrok http 5173` (o proxy do Vite
+encaminha `/api` para o backend local).
 
 ## Documentação do processo (avaliação)
 
+Desenvolvido com **Claude Code** (agente de codificação da Anthropic), em sessões iterativas.
+
 ### Escolhas de design
-- Monorepo sem Turborepo (justificativa acima).
-- Hooks versionados em `.githooks/` em vez de `.git/hooks` para o gate viajar com o repo.
-- Gate em Python puro (stdlib): usa `ast` para descontar testes inline em Python e um
-  rastreador simples de chaves/parênteses para JS/TS.
-- SQLite como banco (recomendação do professor; zero configuração).
+
+- **Monorepo sem Turborepo**: cogitei Turborepo, mas com um único app JS e um app Python
+  (que o Turborepo nem orquestra) ele só adicionaria configuração. npm workspaces bastou.
+- **Parser mock com o mesmo contrato do LLM futuro** (`{meals, sets, unmatched}`), para a
+  troca ser cirúrgica na fase final.
+- **Hooks versionados em `.githooks/`** (via `core.hooksPath`) em vez de `.git/hooks`,
+  para o gate viajar com o repositório.
+- **Gráfico SVG feito à mão** (sem lib de chart): uma série só não justifica dependência;
+  o agente seguiu uma skill de dataviz com paleta validada para daltonismo/contraste,
+  tooltip + crosshair e tabela de dados como camada de acessibilidade.
+- **TACO como subconjunto curado** (54 alimentos comuns de dieta de treino, por 100g) em
+  vez da tabela completa (~600 itens) — suficiente para o protótipo; a tabela completa
+  entra depois como importação. Whey e pasta de amendoim não são TACO (valores de rótulo).
 
 ### O que funcionou
-_(preencher durante o desenvolvimento — anotar prompts que deram bom resultado)_
 
-### O que não funcionou
-_(preencher durante o desenvolvimento — falhas do agente, intervenções manuais)_
+- **Scaffold completo em uma sessão**: monorepo, gate com hooks, backend e frontend com
+  100% de cobertura, tudo commitado com o gate rodando de verdade a cada commit.
+- **O gate pegou o que devia**: testado com um arquivo de 501 linhas (reprovou e bloqueou)
+  e com a suíte real (aprovou).
+- **Prompt que deu certo**: dar ao agente a *mensagem de exemplo real* ("hoje comi 200g de
+  frango...") e exigir que ela virasse um teste de aceitação — o teste do parser cobre a
+  frase inteira e foi ele que pegou o bug mais interessante do projeto (abaixo).
+- O agente instalou sozinho Node e Python via winget quando descobriu que a máquina não
+  tinha nenhum dos dois.
+
+### O que não funcionou / precisou de intervenção
+
+- **Bug real de regex com pt-BR**: "12,5kg" — a vírgula decimal brasileira era confundida
+  com separador de lista e a série perdia carga e reps. O teste unitário pegou; o conserto
+  foi permitir `[,.](?=\d)` no delimitador. Ficou registrado como lição do projeto.
+- **jsdom não entrega `clientX` em `fireEvent.pointerMove`**: o teste de hover do gráfico
+  passou "por sorte" na primeira asserção (tudo era coordenada 0) e falhou na segunda. Foi
+  preciso despachar `MouseEvent('pointermove', {clientX})` manualmente e usar `pointerOut`.
+- **Texto duplicado nos testes de UI**: "frango grelhado" existia na tabela *e* no
+  `<select>` de alimentos; `getByText` quebrou e foi trocado por `getByRole('cell')`.
+- **PowerShell 5.1**: aspas duplas dentro de here-string quebraram `git commit -m` (a
+  mensagem virou argumentos soltos); mensagens de commit tiveram que evitar `"` .
+- **Cobertura de 95% em branches** guiou o design: o agente precisou simplificar
+  condicionais dos componentes (menos ternários, estados explícitos) para cada branch ser
+  testável — efeito colateral positivo do gate.
 
 ### Uso do agente de codificação
-Projeto desenvolvido com **Claude Code**. _(anotar prompts/iterações relevantes)_
+
+Praticamente 100% do código foi gerado pelo Claude Code com supervisão; o histórico de
+commits (um por fase, com o gate aprovando cada um) documenta a progressão. Exemplos de
+prompts usados:
+
+1. *"crie o setup do projeto e também crie uma mini harness gate (script) que valide 500
+   LOC por arquivo, 95% de cobertura, linhas de teste não contam, monorepo React+FastAPI"*
+   — gerou o esqueleto e o `gate.py` com self-check.
+2. *"faça todos os próximos passos naturais"* — backend TACO + parser mock + telas + testes.
+3. A mensagem de exemplo do usuário final virou fixture de teste de aceitação do parser.

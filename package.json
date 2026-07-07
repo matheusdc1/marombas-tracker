@@ -8,6 +8,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",
     "dev:web": "npm --workspace apps/web run dev",
+    "dev:api": "apps\\api\\.venv\\Scripts\\python -m uvicorn app.main:app --reload --port 8000 --app-dir apps/api",
     "test:web": "npm --workspace apps/web run test:coverage",
     "gate": "python scripts/gate.py"
   }
