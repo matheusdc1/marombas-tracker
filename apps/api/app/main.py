@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routes import router
+
 app = FastAPI(title="Marombas Tracker API")
 
 app.add_middleware(
@@ -10,7 +12,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/api/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+app.include_router(router)
