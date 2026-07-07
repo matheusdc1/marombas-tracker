@@ -1,11 +1,24 @@
 import { useState } from 'react'
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Dumbbell,
+  MessageCircle,
+  TrendingUp,
+} from 'lucide-react'
 import { todayIso } from './api'
 import Chat from './Chat'
 import Diario from './Diario'
 import Evolucao from './Evolucao'
 
-const TABS = ['Chat', 'Diário', 'Evolução'] as const
-type Tab = (typeof TABS)[number]
+const TABS = [
+  { name: 'Chat', icon: MessageCircle },
+  { name: 'Diário', icon: CalendarDays },
+  { name: 'Evolução', icon: TrendingUp },
+] as const
+
+type Tab = (typeof TABS)[number]['name']
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('Chat')
@@ -20,18 +33,22 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>🏋️ Marombas Tracker</h1>
+        <h1>
+          <Dumbbell size={24} className="logo" aria-hidden />
+          Marombas Tracker
+        </h1>
         <nav aria-label="abas">
-          {TABS.map((t) => (
-            <button key={t} className={t === tab ? 'active' : ''} onClick={() => setTab(t)}>
-              {t}
+          {TABS.map(({ name, icon: Icon }) => (
+            <button key={name} className={name === tab ? 'active' : ''} onClick={() => setTab(name)}>
+              <Icon size={16} aria-hidden />
+              {name}
             </button>
           ))}
         </nav>
         {tab !== 'Evolução' && (
           <div className="day-picker">
             <button aria-label="dia anterior" onClick={() => shiftDay(-1)}>
-              ◀
+              <ChevronLeft size={18} aria-hidden />
             </button>
             <input
               aria-label="dia"
@@ -40,7 +57,7 @@ export default function App() {
               onChange={(e) => e.target.value && setDay(e.target.value)}
             />
             <button aria-label="próximo dia" onClick={() => shiftDay(1)}>
-              ▶
+              <ChevronRight size={18} aria-hidden />
             </button>
           </div>
         )}

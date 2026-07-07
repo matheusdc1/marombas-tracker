@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { CalendarCheck, Trophy } from 'lucide-react'
 import { getProgress } from './api'
 import LineChart from './LineChart'
 import type { Progress } from './types'
@@ -42,14 +43,26 @@ export default function Evolucao() {
             <>
               <div className="tiles">
                 <div className="tile">
+                  <div className="tile-head">
+                    <span className="tile-label">Dias de treino</span>
+                    <span className="tile-icon">
+                      <CalendarCheck size={14} aria-hidden />
+                    </span>
+                  </div>
                   <span className="tile-value">{data.points.length}</span>
-                  <span className="tile-label">dias de treino</span>
+                  <span className="tile-unit">dias</span>
                 </div>
                 <div className="tile">
+                  <div className="tile-head">
+                    <span className="tile-label">Recorde de volume</span>
+                    <span className="tile-icon">
+                      <Trophy size={14} aria-hidden />
+                    </span>
+                  </div>
                   <span className="tile-value">
-                    {Math.max(...data.points.map((p) => p.volume_kg))} kg
+                    {Math.max(...data.points.map((p) => p.volume_kg))}
                   </span>
-                  <span className="tile-label">recorde de volume</span>
+                  <span className="tile-unit">kg</span>
                 </div>
               </div>
               <LineChart points={data.points} />

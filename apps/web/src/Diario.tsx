@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Beef, Droplets, Dumbbell, Flame, Plus, Wheat, X } from 'lucide-react'
 import { addMeal, addSet, deleteMeal, deleteSet, getFoods, getReport } from './api'
 import type { Food, Report } from './types'
 
@@ -59,26 +60,24 @@ export default function Diario({ day }: { day: string }) {
       {report && (
         <>
           <div className="tiles">
-            <div className="tile">
-              <span className="tile-value">{report.totals.kcal}</span>
-              <span className="tile-label">kcal</span>
-            </div>
-            <div className="tile">
-              <span className="tile-value">{report.totals.protein_g}g</span>
-              <span className="tile-label">proteína</span>
-            </div>
-            <div className="tile">
-              <span className="tile-value">{report.totals.carbs_g}g</span>
-              <span className="tile-label">carboidrato</span>
-            </div>
-            <div className="tile">
-              <span className="tile-value">{report.totals.fat_g}g</span>
-              <span className="tile-label">gordura</span>
-            </div>
-            <div className="tile">
-              <span className="tile-value">{report.totals.volume_kg}kg</span>
-              <span className="tile-label">volume de treino</span>
-            </div>
+            {[
+              { label: 'Calorias', unit: 'kcal', icon: Flame, value: report.totals.kcal },
+              { label: 'Proteína', unit: 'g', icon: Beef, value: report.totals.protein_g },
+              { label: 'Carboidrato', unit: 'g', icon: Wheat, value: report.totals.carbs_g },
+              { label: 'Gordura', unit: 'g', icon: Droplets, value: report.totals.fat_g },
+              { label: 'Volume de treino', unit: 'kg', icon: Dumbbell, value: report.totals.volume_kg },
+            ].map(({ label, unit, icon: Icon, value }) => (
+              <div className="tile" key={label}>
+                <div className="tile-head">
+                  <span className="tile-label">{label}</span>
+                  <span className="tile-icon">
+                    <Icon size={14} aria-hidden />
+                  </span>
+                </div>
+                <span className="tile-value">{value}</span>
+                <span className="tile-unit">{unit}</span>
+              </div>
+            ))}
           </div>
 
           <h3>Refeições</h3>
@@ -111,7 +110,7 @@ export default function Diario({ day }: { day: string }) {
                         aria-label={`remover ${m.name}`}
                         onClick={() => void run(() => deleteMeal(m.id))}
                       >
-                        ×
+                        <X size={14} aria-hidden />
                       </button>
                     </td>
                   </tr>
@@ -135,7 +134,10 @@ export default function Diario({ day }: { day: string }) {
               value={grams}
               onChange={(e) => setGrams(e.target.value)}
             />
-            <button disabled={!foodId}>+ refeição</button>
+            <button aria-label="adicionar refeição" disabled={!foodId}>
+              <Plus size={16} aria-hidden />
+              Adicionar
+            </button>
           </form>
 
           <h3>Treino</h3>
@@ -166,7 +168,7 @@ export default function Diario({ day }: { day: string }) {
                         aria-label={`remover ${s.exercise}`}
                         onClick={() => void run(() => deleteSet(s.id))}
                       >
-                        ×
+                        <X size={14} aria-hidden />
                       </button>
                     </td>
                   </tr>
@@ -203,7 +205,10 @@ export default function Diario({ day }: { day: string }) {
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
             />
-            <button disabled={!exercise.trim()}>+ série</button>
+            <button aria-label="adicionar série" disabled={!exercise.trim()}>
+              <Plus size={16} aria-hidden />
+              Adicionar
+            </button>
           </form>
         </>
       )}

@@ -1,15 +1,17 @@
-/* Tokens da paleta de referência da skill dataviz (modo escuro, validada). */
+/* Design system — referência: fitness app dark + neon (#F3FF47 / #2B2B2B / #0E0E0E).
+   Amarelo neon validado no escuro: contraste 17:1 (banda de luminosidade dispensada
+   por ser série única da marca, com tooltip + tabela de dados como apoio). */
 :root {
-  --page: #0d0d0d;
-  --surface-1: #1a1a19;
-  --text-primary: #ffffff;
-  --text-secondary: #c3c2b7;
-  --muted: #898781;
-  --grid: #2c2c2a;
-  --baseline: #383835;
-  --border: rgba(255, 255, 255, 0.1);
-  --series-1: #3987e5;
-  --error: #e66767;
+  --accent: #f3ff47;
+  --accent-ink: #0e0e0e;
+  --page: #0e0e0e;
+  --surface: #2b2b2b;
+  --surface-2: #1c1c1c;
+  --line: #3d3d3a;
+  --text: #ffffff;
+  --text-2: #c9c9c4;
+  --muted: #8f8f8a;
+  --error: #ff6b6b;
   color-scheme: dark;
 }
 
@@ -20,101 +22,156 @@
 body {
   margin: 0;
   background: var(--page);
-  color: var(--text-primary);
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--text);
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .app {
   max-width: 860px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 20px 16px 32px;
 }
 
-header h1 {
-  font-size: 1.4rem;
-  margin: 8px 0;
+/* ---- tipografia (hierarquia única do app) ---- */
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 4px 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+h1 .logo {
+  color: var(--accent);
+}
+
+h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+
+h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 20px 0 10px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0 0 14px;
+}
+
+.empty {
+  color: var(--text-2);
+  font-size: 0.85rem;
+}
+
+.error {
+  color: var(--error);
+  font-size: 0.85rem;
+}
+
+/* ---- botões (pill, como na referência) ---- */
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button[type='submit'],
+form button {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-weight: 600;
 }
 
 nav {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
-}
-
-button {
-  background: var(--surface-1);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 14px;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-
-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+  margin-bottom: 14px;
 }
 
 nav button.active {
-  border-color: var(--series-1);
-  background: rgba(57, 135, 229, 0.15);
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-weight: 600;
 }
 
 .day-picker {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
+  gap: 6px;
   align-items: center;
-  margin-bottom: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+
+.day-picker button {
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+}
+
+.day-picker input {
+  border: none;
+  background: transparent;
+  padding: 4px 2px;
 }
 
 input,
 select,
 textarea {
-  background: var(--surface-1);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 12px;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
 section {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
-h2 {
-  margin-top: 0;
-  font-size: 1.15rem;
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.empty {
-  color: var(--text-secondary);
-}
-
-.error {
-  color: var(--error);
-}
-
+/* ---- chat ---- */
 .mock-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--muted);
-  font-size: 0.85rem;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  padding: 8px;
+  font-size: 0.8rem;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
 }
 
-/* chat */
 .messages {
   display: flex;
   flex-direction: column;
@@ -124,98 +181,151 @@ h2 {
 
 .msg {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
   white-space: pre-wrap;
   font-family: inherit;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   max-width: 85%;
 }
 
 .msg.user {
   align-self: flex-end;
-  background: rgba(57, 135, 229, 0.2);
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-bottom-right-radius: 4px;
+  font-weight: 500;
 }
 
 .msg.bot {
   align-self: flex-start;
-  background: var(--page);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border-bottom-left-radius: 4px;
 }
 
 .chat form {
   display: flex;
   gap: 8px;
+  align-items: flex-end;
 }
 
 .chat textarea {
   flex: 1;
   resize: vertical;
+  border-radius: 16px;
 }
 
-/* tabelas */
+/* ---- stat tiles (como os Health Metrics da referência) ---- */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 12px 0 4px;
+}
+
+.tile {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tile-label {
+  color: var(--text-2);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.tile-icon {
+  display: inline-flex;
+  color: var(--accent);
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 5px;
+}
+
+.tile-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.tile-unit {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* ---- tabelas ---- */
 table {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.92rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--surface);
+  border-radius: 16px;
+  overflow: hidden;
+  font-size: 0.85rem;
 }
 
 th {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   text-align: left;
 }
 
 th,
 td {
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--grid);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
   font-variant-numeric: tabular-nums;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+td button {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 4px;
+}
+
+td button:hover {
+  color: var(--error);
 }
 
 .add-form {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin: 12px 0 20px;
+  margin: 12px 0 4px;
 }
 
 .add-form input[type='number'] {
-  width: 90px;
+  width: 92px;
 }
 
-/* stat tiles */
-.tiles {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-.tile {
-  background: var(--page);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 16px;
-  display: flex;
-  flex-direction: column;
-  min-width: 110px;
-}
-
-.tile-value {
-  font-size: 1.3rem;
-  font-weight: 600;
-}
-
-.tile-label {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-/* gráfico */
+/* ---- gráfico ---- */
 .chart {
   margin: 0;
   position: relative;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 12px;
 }
 
 .chart svg {
@@ -225,12 +335,12 @@ td {
 }
 
 .chart .grid {
-  stroke: var(--grid);
+  stroke: var(--line);
   stroke-width: 1;
 }
 
 .chart .baseline {
-  stroke: var(--baseline);
+  stroke: #4a4a46;
   stroke-width: 1;
 }
 
@@ -241,13 +351,13 @@ td {
 }
 
 .chart .series-line {
-  stroke: var(--series-1);
+  stroke: var(--accent);
   stroke-width: 2;
 }
 
 .chart .series-dot {
-  fill: var(--series-1);
-  stroke: var(--surface-1);
+  fill: var(--accent);
+  stroke: var(--surface);
   stroke-width: 2;
 }
 
@@ -259,18 +369,28 @@ td {
 
 .chart .tooltip {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 16px;
+  right: 16px;
   background: var(--page);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   padding: 6px 10px;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  font-size: 0.8rem;
+  color: var(--text-2);
 }
 
 details summary {
   color: var(--muted);
   cursor: pointer;
-  margin: 8px 0;
+  margin: 10px 0 8px;
+  font-size: 0.8rem;
+}
+
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
 }

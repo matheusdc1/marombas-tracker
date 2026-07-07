@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { Bot, Send } from 'lucide-react'
 import { sendChat } from './api'
 
 interface Msg {
@@ -35,7 +36,8 @@ export default function Chat({ day }: { day: string }) {
   return (
     <section className="chat">
       <p className="mock-note">
-        🤖 Resposta simulada (mock) — nesta fase o LLM ainda não está integrado. O registro no
+        <Bot size={16} aria-hidden />
+        Resposta simulada (mock) — nesta fase o LLM ainda não está integrado. O registro no
         diário é real.
       </p>
       <div className="messages">
@@ -58,7 +60,9 @@ export default function Chat({ day }: { day: string }) {
           placeholder={HINT}
           rows={3}
         />
-        <button disabled={busy || !text.trim()}>Enviar</button>
+        <button aria-label="Enviar" disabled={busy || !text.trim()}>
+          <Send size={16} aria-hidden />
+        </button>
       </form>
     </section>
   )

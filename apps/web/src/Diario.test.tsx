@@ -9,9 +9,9 @@ describe('Diario', () => {
     render(<Diario day="2026-07-06" />)
     expect(screen.getByText('Carregando…')).toBeTruthy()
     expect(await screen.findByRole('cell', { name: 'frango grelhado' })).toBeTruthy()
-    expect(screen.getByText('438')).toBeTruthy() // kcal total
+    expect(screen.getByText('438')).toBeTruthy() // kcal total no tile
     expect(screen.getByText('supino reto')).toBeTruthy()
-    expect(screen.getByText('1200')).toBeTruthy() // volume da série
+    expect(screen.getAllByText('1200').length).toBeGreaterThan(0) // volume no tile e na tabela
   })
 
   it('mostra estados vazios num dia sem registros', async () => {
@@ -31,7 +31,7 @@ describe('Diario', () => {
     await screen.findByRole('cell', { name: 'frango grelhado' })
     fireEvent.change(screen.getByLabelText('alimento'), { target: { value: '12' } })
     fireEvent.change(screen.getByLabelText('gramas'), { target: { value: '40' } })
-    fireEvent.click(screen.getByRole('button', { name: '+ refeição' }))
+    fireEvent.click(screen.getByRole('button', { name: 'adicionar refeição' }))
     await screen.findByRole('cell', { name: 'frango grelhado' })
     const post = fn.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'POST')!
     expect(post[0]).toBe('/api/log/2026-07-06/meals')
@@ -46,12 +46,14 @@ describe('Diario', () => {
     })
     render(<Diario day="2026-07-06" />)
     await screen.findByText('supino reto')
-    expect((screen.getByRole('button', { name: '+ série' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(
+      (screen.getByRole('button', { name: 'adicionar série' }) as HTMLButtonElement).disabled,
+    ).toBe(true)
     fireEvent.change(screen.getByLabelText('exercício'), { target: { value: 'remada curvada' } })
     fireEvent.change(screen.getByLabelText('séries'), { target: { value: '4' } })
     fireEvent.change(screen.getByLabelText('repetições'), { target: { value: '8' } })
     fireEvent.change(screen.getByLabelText('carga em kg'), { target: { value: '50' } })
-    fireEvent.click(screen.getByRole('button', { name: '+ série' }))
+    fireEvent.click(screen.getByRole('button', { name: 'adicionar série' }))
     await screen.findByText('supino reto')
     const post = fn.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'POST')!
     expect(post[0]).toBe('/api/log/2026-07-06/sets')

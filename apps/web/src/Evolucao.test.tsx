@@ -10,7 +10,7 @@ describe('Evolucao', () => {
     expect(screen.getByText('Carregando…')).toBeTruthy()
     expect(await screen.findByRole('img')).toBeTruthy()
     expect(screen.getByText('7')).toBeTruthy() // dias de treino
-    expect(screen.getByText('1340 kg')).toBeTruthy() // recorde
+    expect(screen.getAllByText('1340').length).toBeGreaterThan(0) // recorde no tile e na tabela
     expect(screen.getAllByRole('option')).toHaveLength(3)
   })
 
