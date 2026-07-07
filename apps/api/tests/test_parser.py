@@ -54,7 +54,45 @@ def test_alimento_desconhecido():
 
 
 def test_serie_sem_exercicio_ignorada():
-    assert parse("fiz 2 series de 30kg 10 reps", FOOD_DICTS)["sets"] == []
+    result = parse("fiz 2 series de 30kg 10 reps", FOOD_DICTS)
+    assert result["sets"] == []
+    assert result["unmatched"] == ["fiz 2 series de 30kg 10 reps"]
+
+
+def test_exercicio_antes_das_series():
+    result = parse("supino reto 3 séries de 12 com 30kg", FOOD_DICTS)
+    assert result["sets"] == [
+        {"exercise": "supino reto", "sets": 3, "reps": 12, "weight_kg": 30.0}
+    ]
+
+
+def test_series_sem_de():
+    result = parse("fiz 4 series supino inclinado 24kg", FOOD_DICTS)
+    assert result["sets"] == [
+        {"exercise": "supino inclinado", "sets": 4, "reps": 10, "weight_kg": 24.0}
+    ]
+
+
+def test_notacao_nxm():
+    result = parse("treinei costas: remada curvada 3x8 40kg, barra fixa 2x6", FOOD_DICTS)
+    assert result["sets"] == [
+        {"exercise": "remada curvada", "sets": 3, "reps": 8, "weight_kg": 40.0},
+        {"exercise": "barra fixa", "sets": 2, "reps": 6, "weight_kg": 0.0},
+    ]
+
+
+def test_nxm_nao_confunde_refeicao():
+    result = parse("comi 2x 100g de arroz branco cozido", FOOD_DICTS)
+    assert result["sets"] == []
+    assert result["meals"][0]["food"]["name"] == "arroz branco cozido"
+
+
+def test_treino_e_refeicao_juntos():
+    result = parse("comi 150g de frango e fiz agachamento 5 séries de 5 com 100kg", FOOD_DICTS)
+    assert result["meals"][0]["food"]["name"] == "frango grelhado"
+    assert result["sets"] == [
+        {"exercise": "agachamento", "sets": 5, "reps": 5, "weight_kg": 100.0}
+    ]
 
 
 def test_carga_com_virgula():

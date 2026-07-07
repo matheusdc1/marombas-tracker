@@ -139,6 +139,15 @@ Desenvolvido com **Claude Code** (agente de codificação da Anthropic), em sess
 - **Bug real de regex com pt-BR**: "12,5kg" — a vírgula decimal brasileira era confundida
   com separador de lista e a série perdia carga e reps. O teste unitário pegou; o conserto
   foi permitir `[,.](?=\d)` no delimitador. Ficou registrado como lição do projeto.
+- **Parser rígido demais na ordem da frase**: a primeira versão só entendia
+  "N séries de exercício..." (o formato do exemplo da spec). Em uso real, "supino 3 séries
+  de 12", "remada 3x8 40kg" e "4 séries supino" eram descartados **em silêncio** — só as
+  refeições registravam. Foi reescrito por cláusulas (ordem independente + notação NxM) e
+  o que não é reconhecido agora aparece como "não reconheci" na resposta do chat.
+- **Bug que 100% de cobertura não pegou**: `sqlite3.ProgrammingError` intermitente no
+  uvicorn — o FastAPI roda dependency e endpoint sync em threads diferentes do pool, e o
+  TestClient (mesma thread) nunca reproduz. Conserto: `check_same_thread=False` + teste de
+  regressão que cruza threads. Lição: suíte verde ≠ servidor real testado.
 - **jsdom não entrega `clientX` em `fireEvent.pointerMove`**: o teste de hover do gráfico
   passou "por sorte" na primeira asserção (tudo era coordenada 0) e falhou na segunda. Foi
   preciso despachar `MouseEvent('pointermove', {clientX})` manualmente e usar `pointerOut`.
