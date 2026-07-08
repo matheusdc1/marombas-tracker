@@ -29,6 +29,11 @@ CREATE TABLE IF NOT EXISTS workout_sets (
     reps INTEGER NOT NULL,
     weight_kg REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS goals (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    kcal REAL NOT NULL,
+    protein_g REAL NOT NULL
+);
 """
 
 
@@ -55,7 +60,8 @@ def init(conn: sqlite3.Connection) -> None:
             "INSERT INTO foods (name, kcal, protein_g, carbs_g, fat_g) VALUES (?, ?, ?, ?, ?)",
             FOODS,
         )
-        conn.commit()
+    conn.execute("INSERT OR IGNORE INTO goals (id, kcal, protein_g) VALUES (1, 2500, 150)")
+    conn.commit()
 
 
 def get_db():

@@ -67,10 +67,17 @@ scripts/gate.py     # gate de qualidade (ver abaixo)
 | GET | `/api/foods?q=` | busca na tabela TACO (54 alimentos curados) |
 | POST | `/api/foods` | cadastra alimento custom (ex.: hipercalórico) |
 | GET | `/api/log/{dia}` | relatório do dia: refeições + treino + totais |
-| POST/DELETE | `/api/log/{dia}/meals`, `/api/meals/{id}` | CRUD de refeições |
-| POST/DELETE | `/api/log/{dia}/sets`, `/api/sets/{id}` | CRUD de séries |
+| POST/PUT/DELETE | `/api/log/{dia}/meals`, `/api/meals/{id}` | CRUD completo de refeições |
+| POST/PUT/DELETE | `/api/log/{dia}/sets`, `/api/sets/{id}` | CRUD completo de séries |
+| GET/PUT | `/api/goals` | metas diárias de kcal e proteína |
 | GET | `/api/progress?exercise=` | volume (kg) por dia, p/ o gráfico |
 | POST | `/api/chat` | **mock do LLM**: interpreta a mensagem, registra e responde |
+
+Dados de demonstração (~2 semanas de diário e treinos com progressão de carga):
+
+```sh
+cd apps/api && .venv\Scripts\python -m app.demo   # use --force para repovoar
+```
 
 ## Gate de qualidade (harness)
 
@@ -100,8 +107,14 @@ npm run dev:api             # FastAPI em http://localhost:8000
 npm run dev:web             # Vite em http://localhost:5173 (proxy /api -> :8000)
 ```
 
-Endpoint público (avaliação): expor o frontend com `ngrok http 5173` (o proxy do Vite
-encaminha `/api` para o backend local).
+### Deploy (Railway, dois serviços)
+
+| Serviço | Root directory | Config |
+|---------|----------------|--------|
+| **api** | `apps/api` | o `Procfile` já define o start (`uvicorn ... --port $PORT`). Variáveis: `ALLOWED_ORIGINS=https://<front>.up.railway.app` e, com um **Volume** montado em `/data`, `MAROMBAS_DB=/data/marombas.db` (sem volume o SQLite zera a cada deploy). Para dados de demo: `railway run python -m app.demo` |
+| **web** | `apps/web` | build `npm install && npm run build`, start `npm start` (vite preview no `$PORT`). Variável **de build**: `VITE_API_URL=https://<api>.up.railway.app` |
+
+Localmente nada muda: sem `VITE_API_URL`, o front usa o proxy do Vite para `/api`.
 
 ## Documentação do processo (avaliação)
 

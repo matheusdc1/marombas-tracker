@@ -89,3 +89,44 @@ def test_chat_alimento_desconhecido(client):
 
 def test_chat_dia_invalido(client):
     assert client.post("/api/chat", json={"message": "oi", "day": "hoje"}).status_code == 400
+
+
+def test_metas_get_e_put(client):
+    assert client.get("/api/goals").json() == {"kcal": 2500.0, "protein_g": 150.0}
+    assert client.put("/api/goals", json={"kcal": 3000, "protein_g": 180}).json() == {"ok": True}
+    assert client.get("/api/goals").json() == {"kcal": 3000.0, "protein_g": 180.0}
+
+
+def test_edita_refeicao(client):
+    whey = client.get("/api/foods", params={"q": "whey"}).json()[0]
+    arroz = client.get("/api/foods", params={"q": "arroz branco cozido"}).json()[0]
+    meal_id = client.post(
+        f"/api/log/{DAY}/meals", json={"food_id": whey["id"], "grams": 30}
+    ).json()["id"]
+    r = client.put(f"/api/meals/{meal_id}", json={"food_id": arroz["id"], "grams": 200})
+    assert r.json() == {"ok": True}
+    meal = client.get(f"/api/log/{DAY}").json()["meals"][0]
+    assert meal["name"] == "arroz branco cozido"
+    assert meal["grams"] == 200
+    assert meal["food_id"] == arroz["id"]
+    assert (
+        client.put("/api/meals/99999", json={"food_id": arroz["id"], "grams": 100}).status_code
+        == 404
+    )
+    assert (
+        client.put(f"/api/meals/{meal_id}", json={"food_id": 99999, "grams": 100}).status_code
+        == 404
+    )
+
+
+def test_edita_serie(client):
+    set_id = client.post(
+        f"/api/log/{DAY}/sets",
+        json={"exercise": "supino reto", "sets": 2, "reps": 10, "weight_kg": 60},
+    ).json()["id"]
+    body = {"exercise": "Supino Inclinado", "sets": 4, "reps": 8, "weight_kg": 50}
+    assert client.put(f"/api/sets/{set_id}", json=body).json() == {"ok": True}
+    updated = client.get(f"/api/log/{DAY}").json()["sets"][0]
+    assert updated["exercise"] == "supino inclinado"
+    assert updated["volume_kg"] == 4 * 8 * 50
+    assert client.put("/api/sets/99999", json=body).status_code == 404

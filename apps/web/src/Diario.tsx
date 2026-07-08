@@ -1,12 +1,26 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Beef, Droplets, Dumbbell, Flame, Plus, Wheat, X } from 'lucide-react'
-import { addMeal, addSet, deleteMeal, deleteSet, getFoods, getReport } from './api'
-import type { Food, Report } from './types'
+import { Beef, Check, Droplets, Dumbbell, Flame, Plus, Target, Wheat } from 'lucide-react'
+import {
+  addMeal,
+  addSet,
+  deleteMeal,
+  deleteSet,
+  getFoods,
+  getGoals,
+  getReport,
+  putGoals,
+  updateMeal,
+  updateSet,
+} from './api'
+import MealsTable from './MealsTable'
+import SetsTable from './SetsTable'
+import type { Food, Goals, Report } from './types'
 
 export default function Diario({ day }: { day: string }) {
   const [report, setReport] = useState<Report | null>(null)
   const [foods, setFoods] = useState<Food[]>([])
+  const [goals, setGoals] = useState<Goals | null>(null)
   const [error, setError] = useState('')
   const [foodId, setFoodId] = useState('')
   const [grams, setGrams] = useState('100')
@@ -14,6 +28,9 @@ export default function Diario({ day }: { day: string }) {
   const [sets, setSets] = useState('3')
   const [reps, setReps] = useState('10')
   const [weight, setWeight] = useState('20')
+  const [editingGoals, setEditingGoals] = useState(false)
+  const [goalKcal, setGoalKcal] = useState('')
+  const [goalProtein, setGoalProtein] = useState('')
 
   async function run(action?: () => Promise<unknown>) {
     try {
@@ -33,6 +50,7 @@ export default function Diario({ day }: { day: string }) {
 
   useEffect(() => {
     getFoods('').then(setFoods).catch(() => setFoods([]))
+    getGoals().then(setGoals).catch(() => setGoals(null))
   }, [])
 
   function submitMeal(e: FormEvent) {
@@ -52,22 +70,45 @@ export default function Diario({ day }: { day: string }) {
     )
   }
 
+  function openGoals(current: Goals) {
+    setGoalKcal(String(current.kcal))
+    setGoalProtein(String(current.protein_g))
+    setEditingGoals(true)
+  }
+
+  function submitGoals(e: FormEvent) {
+    e.preventDefault()
+    void run(async () => {
+      await putGoals({ kcal: Number(goalKcal), protein_g: Number(goalProtein) })
+      setGoals(await getGoals())
+      setEditingGoals(false)
+    })
+  }
+
+  const tiles = report && [
+    { label: 'Calorias', unit: 'kcal', icon: Flame, value: report.totals.kcal, goal: goals?.kcal },
+    {
+      label: 'Proteína',
+      unit: 'g',
+      icon: Beef,
+      value: report.totals.protein_g,
+      goal: goals?.protein_g,
+    },
+    { label: 'Carboidrato', unit: 'g', icon: Wheat, value: report.totals.carbs_g },
+    { label: 'Gordura', unit: 'g', icon: Droplets, value: report.totals.fat_g },
+    { label: 'Volume de treino', unit: 'kg', icon: Dumbbell, value: report.totals.volume_kg },
+  ]
+
   return (
     <section className="diario">
       <h2>Diário de {day}</h2>
       <p className="muted">Totais do dia, refeições e treino — edite à vontade.</p>
       {error && <p className="error">{error}</p>}
       {!report && !error && <p>Carregando…</p>}
-      {report && (
+      {report && tiles && (
         <>
           <div className="tiles">
-            {[
-              { label: 'Calorias', unit: 'kcal', icon: Flame, value: report.totals.kcal },
-              { label: 'Proteína', unit: 'g', icon: Beef, value: report.totals.protein_g },
-              { label: 'Carboidrato', unit: 'g', icon: Wheat, value: report.totals.carbs_g },
-              { label: 'Gordura', unit: 'g', icon: Droplets, value: report.totals.fat_g },
-              { label: 'Volume de treino', unit: 'kg', icon: Dumbbell, value: report.totals.volume_kg },
-            ].map(({ label, unit, icon: Icon, value }) => (
+            {tiles.map(({ label, unit, icon: Icon, value, goal }) => (
               <div className="tile" key={label}>
                 <div className="tile-head">
                   <span className="tile-label">{label}</span>
@@ -77,48 +118,65 @@ export default function Diario({ day }: { day: string }) {
                 </div>
                 <span className="tile-value">{value}</span>
                 <span className="tile-unit">{unit}</span>
+                {goal != null && (
+                  <>
+                    <div
+                      className="progress"
+                      role="progressbar"
+                      aria-label={`progresso de ${label}`}
+                      aria-valuemin={0}
+                      aria-valuemax={goal}
+                      aria-valuenow={Math.min(value, goal)}
+                    >
+                      <div
+                        className="progress-fill"
+                        style={{ width: `${Math.min(100, (value / goal) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="tile-goal">
+                      meta: {goal} {unit}
+                    </span>
+                  </>
+                )}
               </div>
             ))}
           </div>
+          {goals && !editingGoals && (
+            <button className="ghost" aria-label="editar metas" onClick={() => openGoals(goals)}>
+              <Target size={14} aria-hidden />
+              Editar metas
+            </button>
+          )}
+          {editingGoals && (
+            <form className="add-form" onSubmit={submitGoals}>
+              <input
+                aria-label="meta de calorias"
+                type="number"
+                min="1"
+                value={goalKcal}
+                onChange={(e) => setGoalKcal(e.target.value)}
+              />
+              <input
+                aria-label="meta de proteína"
+                type="number"
+                min="1"
+                value={goalProtein}
+                onChange={(e) => setGoalProtein(e.target.value)}
+              />
+              <button aria-label="salvar metas">
+                <Check size={16} aria-hidden />
+                Salvar metas
+              </button>
+            </form>
+          )}
 
           <h3>Refeições</h3>
-          {report.meals.length === 0 ? (
-            <p className="empty">Nenhuma refeição registrada neste dia.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Alimento</th>
-                  <th>Qtd (g)</th>
-                  <th>kcal</th>
-                  <th>P (g)</th>
-                  <th>C (g)</th>
-                  <th>G (g)</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.meals.map((m) => (
-                  <tr key={m.id}>
-                    <td>{m.name}</td>
-                    <td>{m.grams}</td>
-                    <td>{m.kcal}</td>
-                    <td>{m.protein_g}</td>
-                    <td>{m.carbs_g}</td>
-                    <td>{m.fat_g}</td>
-                    <td>
-                      <button
-                        aria-label={`remover ${m.name}`}
-                        onClick={() => void run(() => deleteMeal(m.id))}
-                      >
-                        <X size={14} aria-hidden />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <MealsTable
+            meals={report.meals}
+            foods={foods}
+            onUpdate={(id, food_id, mealGrams) => void run(() => updateMeal(id, food_id, mealGrams))}
+            onDelete={(id) => void run(() => deleteMeal(id))}
+          />
           <form className="add-form" onSubmit={submitMeal}>
             <select aria-label="alimento" value={foodId} onChange={(e) => setFoodId(e.target.value)}>
               <option value="">alimento…</option>
@@ -142,41 +200,11 @@ export default function Diario({ day }: { day: string }) {
           </form>
 
           <h3>Treino</h3>
-          {report.sets.length === 0 ? (
-            <p className="empty">Nenhuma série registrada neste dia.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Exercício</th>
-                  <th>Séries</th>
-                  <th>Reps</th>
-                  <th>Carga (kg)</th>
-                  <th>Volume (kg)</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.sets.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.exercise}</td>
-                    <td>{s.sets}</td>
-                    <td>{s.reps}</td>
-                    <td>{s.weight_kg}</td>
-                    <td>{s.volume_kg}</td>
-                    <td>
-                      <button
-                        aria-label={`remover ${s.exercise}`}
-                        onClick={() => void run(() => deleteSet(s.id))}
-                      >
-                        <X size={14} aria-hidden />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <SetsTable
+            sets={report.sets}
+            onUpdate={(id, data) => void run(() => updateSet(id, data))}
+            onDelete={(id) => void run(() => deleteSet(id))}
+          />
           <form className="add-form" onSubmit={submitSet}>
             <input
               aria-label="exercício"

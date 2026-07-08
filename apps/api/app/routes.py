@@ -43,6 +43,11 @@ class ChatIn(BaseModel):
     day: str
 
 
+class GoalsIn(BaseModel):
+    kcal: float = Field(gt=0)
+    protein_g: float = Field(gt=0)
+
+
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -74,7 +79,7 @@ def report(day: str, db: sqlite3.Connection = Depends(get_db)):
     meals = [
         dict(r)
         for r in db.execute(
-            """SELECT m.id, f.name, m.grams,
+            """SELECT m.id, m.food_id, f.name, m.grams,
                       ROUND(f.kcal * m.grams / 100, 1) AS kcal,
                       ROUND(f.protein_g * m.grams / 100, 1) AS protein_g,
                       ROUND(f.carbs_g * m.grams / 100, 1) AS carbs_g,
@@ -112,6 +117,19 @@ def add_meal(day: str, body: MealIn, db: sqlite3.Connection = Depends(get_db)):
     return {"id": cur.lastrowid}
 
 
+@router.put("/meals/{meal_id}")
+def update_meal(meal_id: int, body: MealIn, db: sqlite3.Connection = Depends(get_db)):
+    if not db.execute("SELECT 1 FROM foods WHERE id = ?", (body.food_id,)).fetchone():
+        raise HTTPException(404, "alimento nao encontrado")
+    updated = db.execute(
+        "UPDATE meals SET food_id = ?, grams = ? WHERE id = ?",
+        (body.food_id, body.grams, meal_id),
+    ).rowcount
+    if updated == 0:
+        raise HTTPException(404, "refeicao nao encontrada")
+    return {"ok": True}
+
+
 @router.delete("/meals/{meal_id}")
 def delete_meal(meal_id: int, db: sqlite3.Connection = Depends(get_db)):
     if db.execute("DELETE FROM meals WHERE id = ?", (meal_id,)).rowcount == 0:
@@ -129,10 +147,34 @@ def add_set(day: str, body: SetIn, db: sqlite3.Connection = Depends(get_db)):
     return {"id": cur.lastrowid}
 
 
+@router.put("/sets/{set_id}")
+def update_set(set_id: int, body: SetIn, db: sqlite3.Connection = Depends(get_db)):
+    updated = db.execute(
+        "UPDATE workout_sets SET exercise = ?, sets = ?, reps = ?, weight_kg = ? WHERE id = ?",
+        (body.exercise.strip().lower(), body.sets, body.reps, body.weight_kg, set_id),
+    ).rowcount
+    if updated == 0:
+        raise HTTPException(404, "serie nao encontrada")
+    return {"ok": True}
+
+
 @router.delete("/sets/{set_id}")
 def delete_set(set_id: int, db: sqlite3.Connection = Depends(get_db)):
     if db.execute("DELETE FROM workout_sets WHERE id = ?", (set_id,)).rowcount == 0:
         raise HTTPException(404, "serie nao encontrada")
+    return {"ok": True}
+
+
+@router.get("/goals")
+def get_goals(db: sqlite3.Connection = Depends(get_db)):
+    return dict(db.execute("SELECT kcal, protein_g FROM goals WHERE id = 1").fetchone())
+
+
+@router.put("/goals")
+def put_goals(body: GoalsIn, db: sqlite3.Connection = Depends(get_db)):
+    db.execute(
+        "UPDATE goals SET kcal = ?, protein_g = ? WHERE id = 1", (body.kcal, body.protein_g)
+    )
     return {"ok": True}
 
 

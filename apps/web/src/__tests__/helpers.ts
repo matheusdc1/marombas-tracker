@@ -1,15 +1,35 @@
 import { vi } from 'vitest'
-import type { Food, Progress, Report } from '../types'
+import type { Food, Goals, Progress, Report } from '../types'
 
 export const REPORT: Report = {
   day: '2026-07-06',
   meals: [
-    { id: 1, name: 'frango grelhado', grams: 200, kcal: 318, protein_g: 64, carbs_g: 0, fat_g: 5 },
-    { id: 2, name: 'whey protein', grams: 30, kcal: 120, protein_g: 24, carbs_g: 3, fat_g: 1.8 },
+    {
+      id: 1,
+      food_id: 1,
+      name: 'frango grelhado',
+      grams: 200,
+      kcal: 318,
+      protein_g: 64,
+      carbs_g: 0,
+      fat_g: 5,
+    },
+    {
+      id: 2,
+      food_id: 12,
+      name: 'whey protein',
+      grams: 30,
+      kcal: 120,
+      protein_g: 24,
+      carbs_g: 3,
+      fat_g: 1.8,
+    },
   ],
   sets: [{ id: 1, exercise: 'supino reto', sets: 2, reps: 10, weight_kg: 60, volume_kg: 1200 }],
   totals: { kcal: 438, protein_g: 88, carbs_g: 3, fat_g: 6.8, volume_kg: 1200 },
 }
+
+export const GOALS: Goals = { kcal: 2500, protein_g: 150 }
 
 export const EMPTY_REPORT: Report = {
   day: '2026-07-05',

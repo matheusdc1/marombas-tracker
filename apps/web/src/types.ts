@@ -9,12 +9,18 @@ export interface Food {
 
 export interface MealRow {
   id: number
+  food_id: number
   name: string
   grams: number
   kcal: number
   protein_g: number
   carbs_g: number
   fat_g: number
+}
+
+export interface Goals {
+  kcal: number
+  protein_g: number
 }
 
 export interface SetRow {

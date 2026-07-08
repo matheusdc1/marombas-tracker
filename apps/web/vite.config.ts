@@ -7,11 +7,16 @@ export default defineConfig({
   server: {
     proxy: { '/api': 'http://localhost:8000' },
   },
+  preview: {
+    host: true,
+    allowedHosts: ['.up.railway.app'],
+  },
   test: {
     environment: 'jsdom',
     globals: true,
     restoreMocks: true,
     unstubGlobals: true,
+    unstubEnvs: true,
     coverage: {
       provider: 'v8',
       include: ['src/**'],
