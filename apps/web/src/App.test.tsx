@@ -10,9 +10,19 @@ function setup() {
     'GET /api/progress': PROGRESS,
   })
   render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /vamos começar/i }))
 }
 
 describe('App', () => {
+  it('abre na landing e o botão leva para o chat', () => {
+    mockFetch({})
+    render(<App />)
+    expect(screen.getByText('Seu diário inteligente de treino e alimentação.')).toBeTruthy()
+    expect(screen.queryByText(/resposta simulada/i)).toBeNull() // app ainda não abriu
+    fireEvent.click(screen.getByRole('button', { name: /vamos começar/i }))
+    expect(screen.getByText(/resposta simulada/i)).toBeTruthy() // caiu no Chat
+  })
+
   it('abre no chat e navega entre as abas', async () => {
     setup()
     expect(screen.getByText(/resposta simulada/i)).toBeTruthy()

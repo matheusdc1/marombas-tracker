@@ -11,6 +11,7 @@ import { todayIso } from './api'
 import Chat from './Chat'
 import Diario from './Diario'
 import Evolucao from './Evolucao'
+import Landing from './Landing'
 
 const TABS = [
   { name: 'Chat', icon: MessageCircle },
@@ -21,6 +22,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]['name']
 
 export default function App() {
+  const [started, setStarted] = useState(false)
   const [tab, setTab] = useState<Tab>('Chat')
   const [day, setDay] = useState(todayIso())
 
@@ -28,6 +30,10 @@ export default function App() {
     const d = new Date(`${day}T12:00:00Z`)
     d.setUTCDate(d.getUTCDate() + delta)
     setDay(d.toISOString().slice(0, 10))
+  }
+
+  if (!started) {
+    return <Landing onStart={() => setStarted(true)} />
   }
 
   return (

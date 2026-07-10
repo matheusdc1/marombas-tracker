@@ -206,6 +206,89 @@ textarea {
   font-size: 0.85rem;
 }
 
+/* ---- landing ---- */
+.landing {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--s7) var(--s4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.landing-logo {
+  display: inline-flex;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  padding: var(--s4);
+  margin-bottom: var(--s5);
+}
+
+.landing h1 {
+  justify-content: center;
+  font-size: 2rem;
+  margin: 0 0 var(--s2);
+}
+
+.landing-subtitle {
+  color: var(--text-2);
+  font-size: 1rem;
+  margin: 0 0 var(--s4);
+}
+
+.landing-desc {
+  color: var(--muted);
+  font-size: 0.88rem;
+  max-width: 480px;
+  margin: 0 0 var(--s6);
+}
+
+.landing-cta {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: var(--s3) var(--s6);
+}
+
+.landing-cta:hover:not(:disabled) {
+  background: #e9f53d;
+  border-color: #e9f53d;
+}
+
+.landing-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--s3);
+  margin-top: var(--s7);
+  width: 100%;
+}
+
+.landing-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  padding: var(--s5) var(--s4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.landing-card h3 {
+  margin: var(--s2) 0 0;
+}
+
+.landing-card p {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
 /* ---- chat ---- */
 .mock-note {
   display: flex;
