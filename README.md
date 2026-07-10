@@ -111,8 +111,8 @@ npm run dev:web             # Vite em http://localhost:5173 (proxy /api -> :8000
 
 | Serviço | Root directory | Config |
 |---------|----------------|--------|
-| **api** | `apps/api` | o `Procfile` já define o start (`uvicorn ... --port $PORT`). Variáveis: `ALLOWED_ORIGINS=https://<front>.up.railway.app` e, com um **Volume** montado em `/data`, `MAROMBAS_DB=/data/marombas.db` (sem volume o SQLite zera a cada deploy). Para dados de demo: `railway run python -m app.demo` |
-| **web** | `apps/web` | build `npm install && npm run build`, start `npm start` (vite preview no `$PORT`). Variável **de build**: `VITE_API_URL=https://<api>.up.railway.app` |
+| **api** | `apps/api` | start: `python -m app.demo && uvicorn app.main:app --host 0.0.0.0 --port $PORT` (o seed é idempotente — só popula banco vazio). Variáveis: `ALLOWED_ORIGINS=https://<front>.up.railway.app` (sem barra final) e, com um **Volume** montado em `/data`, `MAROMBAS_DB=/data/marombas.db` (sem volume o SQLite zera a cada deploy) |
+| **web** | raiz do repo | build `npm run build --workspace=web`, start `npm run start --workspace=web` (vite preview no `$PORT`), watch path `/apps/web/**`. Variável **de build**: `VITE_API_URL=https://<api>.up.railway.app` — alterar exige redeploy |
 
 Localmente nada muda: sem `VITE_API_URL`, o front usa o proxy do Vite para `/api`.
 
