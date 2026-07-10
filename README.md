@@ -1,5 +1,8 @@
 # 🏋️ Marombas Tracker
 
+> **App no ar:** https://marombastracker.up.railway.app/
+> (frontend e API hospedados no Railway; dados de demonstração já carregados)
+
 Tracker de dieta e treino para marombas: você descreve **em linguagem natural** o que comeu
 e o treino que fez, e o sistema calcula calorias/macronutrientes (base: **tabela TACO**) e
 registra o treino em tabelas com progressão de cargas e gráfico de evolução.
