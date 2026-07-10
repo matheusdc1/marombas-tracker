@@ -21,6 +21,7 @@ export interface MealRow {
 export interface Goals {
   kcal: number
   protein_g: number
+  water_ml: number
 }
 
 export interface SetRow {
@@ -38,6 +39,7 @@ export interface Totals {
   carbs_g: number
   fat_g: number
   volume_kg: number
+  water_ml: number
 }
 
 export interface Report {

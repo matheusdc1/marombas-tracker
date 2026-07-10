@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Beef, Check, Droplets, Dumbbell, Flame, Plus, Target, Wheat } from 'lucide-react'
+import {
+  Beef,
+  Check,
+  Droplets,
+  Dumbbell,
+  Flame,
+  Gauge,
+  GlassWater,
+  Plus,
+  Target,
+  Wheat,
+} from 'lucide-react'
 import {
   addMeal,
   addSet,
+  addWater,
   deleteMeal,
   deleteSet,
   getFoods,
@@ -31,6 +43,7 @@ export default function Diario({ day }: { day: string }) {
   const [editingGoals, setEditingGoals] = useState(false)
   const [goalKcal, setGoalKcal] = useState('')
   const [goalProtein, setGoalProtein] = useState('')
+  const [goalWater, setGoalWater] = useState('')
 
   async function run(action?: () => Promise<unknown>) {
     try {
@@ -73,17 +86,24 @@ export default function Diario({ day }: { day: string }) {
   function openGoals(current: Goals) {
     setGoalKcal(String(current.kcal))
     setGoalProtein(String(current.protein_g))
+    setGoalWater(String(current.water_ml))
     setEditingGoals(true)
   }
 
   function submitGoals(e: FormEvent) {
     e.preventDefault()
     void run(async () => {
-      await putGoals({ kcal: Number(goalKcal), protein_g: Number(goalProtein) })
+      await putGoals({
+        kcal: Number(goalKcal),
+        protein_g: Number(goalProtein),
+        water_ml: Number(goalWater),
+      })
       setGoals(await getGoals())
       setEditingGoals(false)
     })
   }
+
+  const liters = (ml: number) => Number((ml / 1000).toFixed(1))
 
   const tiles = report && [
     { label: 'Calorias', unit: 'kcal', icon: Flame, value: report.totals.kcal, goal: goals?.kcal },
@@ -140,6 +160,65 @@ export default function Diario({ day }: { day: string }) {
                 )}
               </div>
             ))}
+            {goals && (
+              <div className="tile">
+                <div className="tile-head">
+                  <span className="tile-label">Calorias restantes</span>
+                  <span className="tile-icon">
+                    <Gauge size={14} aria-hidden />
+                  </span>
+                </div>
+                {(() => {
+                  const remaining = Math.round((goals.kcal - report.totals.kcal) * 10) / 10
+                  return (
+                    <>
+                      <span className={`tile-value${remaining < 0 ? ' over' : ''}`}>
+                        {remaining}
+                      </span>
+                      <span className="tile-unit">
+                        {remaining < 0 ? 'kcal acima da meta' : 'kcal disponíveis'}
+                      </span>
+                    </>
+                  )
+                })()}
+              </div>
+            )}
+            <div className="tile">
+              <div className="tile-head">
+                <span className="tile-label">Água</span>
+                <span className="tile-icon">
+                  <GlassWater size={14} aria-hidden />
+                </span>
+              </div>
+              <span className="tile-value">
+                {liters(report.totals.water_ml)}L{goals && ` / ${liters(goals.water_ml)}L`}
+              </span>
+              <span className="tile-unit">hoje</span>
+              {goals && (
+                <div
+                  className="progress"
+                  role="progressbar"
+                  aria-label="progresso de água"
+                  aria-valuemin={0}
+                  aria-valuemax={goals.water_ml}
+                  aria-valuenow={Math.min(report.totals.water_ml, goals.water_ml)}
+                >
+                  <div
+                    className="progress-fill"
+                    style={{
+                      width: `${Math.min(100, (report.totals.water_ml / goals.water_ml) * 100)}%`,
+                    }}
+                  />
+                </div>
+              )}
+              <div className="water-actions">
+                {[250, 500, 1000].map((ml) => (
+                  <button key={ml} onClick={() => void run(() => addWater(day, ml))}>
+                    +{ml === 1000 ? '1L' : `${ml}ml`}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           {goals && !editingGoals && (
             <button className="ghost" aria-label="editar metas" onClick={() => openGoals(goals)}>
@@ -162,6 +241,13 @@ export default function Diario({ day }: { day: string }) {
                 min="1"
                 value={goalProtein}
                 onChange={(e) => setGoalProtein(e.target.value)}
+              />
+              <input
+                aria-label="meta de água em ml"
+                type="number"
+                min="1"
+                value={goalWater}
+                onChange={(e) => setGoalWater(e.target.value)}
               />
               <button aria-label="salvar metas">
                 <Check size={16} aria-hidden />

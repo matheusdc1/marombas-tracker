@@ -32,7 +32,13 @@ CREATE TABLE IF NOT EXISTS workout_sets (
 CREATE TABLE IF NOT EXISTS goals (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     kcal REAL NOT NULL,
-    protein_g REAL NOT NULL
+    protein_g REAL NOT NULL,
+    water_ml REAL NOT NULL DEFAULT 4000
+);
+CREATE TABLE IF NOT EXISTS water (
+    id INTEGER PRIMARY KEY,
+    day TEXT NOT NULL,
+    ml REAL NOT NULL
 );
 """
 
@@ -60,7 +66,13 @@ def init(conn: sqlite3.Connection) -> None:
             "INSERT INTO foods (name, kcal, protein_g, carbs_g, fat_g) VALUES (?, ?, ?, ?, ?)",
             FOODS,
         )
-    conn.execute("INSERT OR IGNORE INTO goals (id, kcal, protein_g) VALUES (1, 2500, 150)")
+    try:  # migracao: bancos criados antes da meta de agua
+        conn.execute("ALTER TABLE goals ADD COLUMN water_ml REAL NOT NULL DEFAULT 4000")
+    except sqlite3.OperationalError:
+        pass  # coluna ja existe
+    conn.execute(
+        "INSERT OR IGNORE INTO goals (id, kcal, protein_g, water_ml) VALUES (1, 2500, 150, 4000)"
+    )
     conn.commit()
 
 

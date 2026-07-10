@@ -40,10 +40,12 @@ def seed(days: int = 14, force: bool = False) -> str:
     try:
         existing = conn.execute("SELECT COUNT(*) FROM meals").fetchone()[0]
         existing += conn.execute("SELECT COUNT(*) FROM workout_sets").fetchone()[0]
+        existing += conn.execute("SELECT COUNT(*) FROM water").fetchone()[0]
         if existing and not force:
             return "banco ja tem dados — rode com --force para repovoar"
         conn.execute("DELETE FROM meals")
         conn.execute("DELETE FROM workout_sets")
+        conn.execute("DELETE FROM water")
         food_ids = {
             name: conn.execute("SELECT id FROM foods WHERE name = ?", (name,)).fetchone()[0]
             for name, _ in DAILY_MEALS
@@ -57,6 +59,9 @@ def seed(days: int = 14, force: bool = False) -> str:
                     "INSERT INTO meals (day, food_id, grams) VALUES (?, ?, ?)",
                     (day, food_ids[name], grams + index % 3 * 10),
                 )
+            conn.execute(
+                "INSERT INTO water (day, ml) VALUES (?, ?)", (day, 2000 + index % 4 * 500)
+            )
             split = SPLITS[index % len(SPLITS)]
             if split is None:
                 continue

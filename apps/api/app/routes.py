@@ -46,6 +46,11 @@ class ChatIn(BaseModel):
 class GoalsIn(BaseModel):
     kcal: float = Field(gt=0)
     protein_g: float = Field(gt=0)
+    water_ml: float = Field(gt=0)
+
+
+class WaterIn(BaseModel):
+    ml: float = Field(gt=0)
 
 
 @router.get("/health")
@@ -102,6 +107,10 @@ def report(day: str, db: sqlite3.Connection = Depends(get_db)):
         for key in ("kcal", "protein_g", "carbs_g", "fat_g")
     }
     totals["volume_kg"] = round(sum(s["volume_kg"] for s in sets_), 1)
+    water = db.execute(
+        "SELECT COALESCE(SUM(ml), 0) FROM water WHERE day = ?", (day,)
+    ).fetchone()[0]
+    totals["water_ml"] = round(water, 1)
     return {"day": day, "meals": meals, "sets": sets_, "totals": totals}
 
 
@@ -167,15 +176,25 @@ def delete_set(set_id: int, db: sqlite3.Connection = Depends(get_db)):
 
 @router.get("/goals")
 def get_goals(db: sqlite3.Connection = Depends(get_db)):
-    return dict(db.execute("SELECT kcal, protein_g FROM goals WHERE id = 1").fetchone())
+    return dict(
+        db.execute("SELECT kcal, protein_g, water_ml FROM goals WHERE id = 1").fetchone()
+    )
 
 
 @router.put("/goals")
 def put_goals(body: GoalsIn, db: sqlite3.Connection = Depends(get_db)):
     db.execute(
-        "UPDATE goals SET kcal = ?, protein_g = ? WHERE id = 1", (body.kcal, body.protein_g)
+        "UPDATE goals SET kcal = ?, protein_g = ?, water_ml = ? WHERE id = 1",
+        (body.kcal, body.protein_g, body.water_ml),
     )
     return {"ok": True}
+
+
+@router.post("/log/{day}/water", status_code=201)
+def add_water(day: str, body: WaterIn, db: sqlite3.Connection = Depends(get_db)):
+    valid_day(day)
+    cur = db.execute("INSERT INTO water (day, ml) VALUES (?, ?)", (day, body.ml))
+    return {"id": cur.lastrowid}
 
 
 @router.get("/progress")

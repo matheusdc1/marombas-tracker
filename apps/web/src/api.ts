@@ -42,6 +42,9 @@ export const updateSet = (
 export const deleteSet = (id: number) =>
   req<{ ok: boolean }>(`/api/sets/${id}`, { method: 'DELETE' })
 
+export const addWater = (day: string, ml: number) =>
+  req<{ id: number }>(`/api/log/${day}/water`, json({ ml }))
+
 export const getGoals = () => req<Goals>('/api/goals')
 
 export const putGoals = (goals: Goals) =>

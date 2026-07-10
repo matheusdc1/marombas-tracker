@@ -20,16 +20,57 @@ describe('Diario', () => {
     const fn = mockFetch({ ...ROUTES, 'PUT /api/goals': { ok: true } })
     render(<Diario day="2026-07-06" />)
     await screen.findByRole('cell', { name: 'frango grelhado' })
-    expect(screen.getAllByRole('progressbar')).toHaveLength(2) // calorias e proteína
+    expect(screen.getAllByRole('progressbar')).toHaveLength(3) // calorias, proteína e água
     expect(screen.getByText('meta: 2500 kcal')).toBeTruthy()
     fireEvent.click(await screen.findByLabelText('editar metas'))
     fireEvent.change(screen.getByLabelText('meta de calorias'), { target: { value: '3000' } })
     fireEvent.change(screen.getByLabelText('meta de proteína'), { target: { value: '180' } })
+    fireEvent.change(screen.getByLabelText('meta de água em ml'), { target: { value: '3500' } })
     fireEvent.click(screen.getByLabelText('salvar metas'))
     await screen.findByLabelText('editar metas') // formulário fechou
     const put = fn.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'PUT')!
     expect(put[0]).toBe('/api/goals')
-    expect(JSON.parse((put[1] as RequestInit).body as string)).toEqual({ kcal: 3000, protein_g: 180 })
+    expect(JSON.parse((put[1] as RequestInit).body as string)).toEqual({
+      kcal: 3000,
+      protein_g: 180,
+      water_ml: 3500,
+    })
+  })
+
+  it('mostra a água do dia e registra pelos botões rápidos', async () => {
+    const fn = mockFetch({ ...ROUTES, 'POST /api/log/2026-07-06/water': { id: 9 } })
+    render(<Diario day="2026-07-06" />)
+    await screen.findByRole('cell', { name: 'frango grelhado' })
+    expect(screen.getByText('2.6L / 4L')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '+250ml' }))
+    await screen.findByText('2.6L / 4L')
+    fireEvent.click(screen.getByRole('button', { name: '+1L' }))
+    await screen.findByText('2.6L / 4L')
+    const posts = fn.mock.calls.filter(
+      ([url, init]) =>
+        (init as RequestInit | undefined)?.method === 'POST' && (url as string).includes('/water'),
+    )
+    expect(posts.map(([, init]) => JSON.parse((init as RequestInit).body as string))).toEqual([
+      { ml: 250 },
+      { ml: 1000 },
+    ])
+  })
+
+  it('mostra calorias restantes, em vermelho quando estoura a meta', async () => {
+    mockFetch(ROUTES)
+    const { unmount } = render(<Diario day="2026-07-06" />)
+    await screen.findByRole('cell', { name: 'frango grelhado' })
+    const remaining = screen.getByText('2062') // 2500 - 438
+    expect(remaining.className).not.toContain('over')
+    expect(screen.getByText('kcal disponíveis')).toBeTruthy()
+    unmount()
+    // dia que passou da meta
+    const over = { ...REPORT, totals: { ...REPORT.totals, kcal: 2700 } }
+    mockFetch({ ...ROUTES, 'GET /api/log': over })
+    render(<Diario day="2026-07-06" />)
+    const negative = await screen.findByText('-200')
+    expect(negative.className).toContain('over')
+    expect(screen.getByText('kcal acima da meta')).toBeTruthy()
   })
 
   it('sem metas (endpoint fora) os tiles ficam sem barra', async () => {

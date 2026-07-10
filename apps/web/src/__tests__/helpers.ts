@@ -26,16 +26,16 @@ export const REPORT: Report = {
     },
   ],
   sets: [{ id: 1, exercise: 'supino reto', sets: 2, reps: 10, weight_kg: 60, volume_kg: 1200 }],
-  totals: { kcal: 438, protein_g: 88, carbs_g: 3, fat_g: 6.8, volume_kg: 1200 },
+  totals: { kcal: 438, protein_g: 88, carbs_g: 3, fat_g: 6.8, volume_kg: 1200, water_ml: 2600 },
 }
 
-export const GOALS: Goals = { kcal: 2500, protein_g: 150 }
+export const GOALS: Goals = { kcal: 2500, protein_g: 150, water_ml: 4000 }
 
 export const EMPTY_REPORT: Report = {
   day: '2026-07-05',
   meals: [],
   sets: [],
-  totals: { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, volume_kg: 0 },
+  totals: { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, volume_kg: 0, water_ml: 0 },
 }
 
 export const PROGRESS: Progress = {

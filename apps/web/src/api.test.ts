@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   addMeal,
   addSet,
+  addWater,
   deleteMeal,
   deleteSet,
   getFoods,
@@ -31,6 +32,7 @@ describe('api', () => {
       'PUT /api/sets/8': { ok: true },
       'GET /api/goals': GOALS,
       'PUT /api/goals': { ok: true },
+      'POST /api/log/2026-07-06/water': { id: 3 },
     })
     expect(await getFoods('fran go')).toEqual(FOODS)
     expect(fn).toHaveBeenLastCalledWith('/api/foods?q=fran%20go', undefined)
@@ -54,7 +56,9 @@ describe('api', () => {
       ok: true,
     })
     expect(await getGoals()).toEqual(GOALS)
-    expect(await putGoals({ kcal: 3000, protein_g: 180 })).toEqual({ ok: true })
+    expect(await putGoals({ kcal: 3000, protein_g: 180, water_ml: 3500 })).toEqual({ ok: true })
+    expect(await addWater('2026-07-06', 250)).toEqual({ id: 3 })
+    expect(JSON.parse((fn.mock.lastCall![1] as RequestInit).body as string)).toEqual({ ml: 250 })
   })
 
   it('prefixa as URLs com VITE_API_URL quando definido', async () => {

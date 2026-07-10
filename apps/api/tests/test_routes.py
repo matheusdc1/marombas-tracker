@@ -92,9 +92,28 @@ def test_chat_dia_invalido(client):
 
 
 def test_metas_get_e_put(client):
-    assert client.get("/api/goals").json() == {"kcal": 2500.0, "protein_g": 150.0}
-    assert client.put("/api/goals", json={"kcal": 3000, "protein_g": 180}).json() == {"ok": True}
-    assert client.get("/api/goals").json() == {"kcal": 3000.0, "protein_g": 180.0}
+    assert client.get("/api/goals").json() == {
+        "kcal": 2500.0,
+        "protein_g": 150.0,
+        "water_ml": 4000.0,
+    }
+    body = {"kcal": 3000, "protein_g": 180, "water_ml": 3500}
+    assert client.put("/api/goals", json=body).json() == {"ok": True}
+    assert client.get("/api/goals").json() == {
+        "kcal": 3000.0,
+        "protein_g": 180.0,
+        "water_ml": 3500.0,
+    }
+
+
+def test_agua(client):
+    assert client.post(f"/api/log/{DAY}/water", json={"ml": 250}).status_code == 201
+    assert client.post(f"/api/log/{DAY}/water", json={"ml": 500}).status_code == 201
+    report = client.get(f"/api/log/{DAY}").json()
+    assert report["totals"]["water_ml"] == 750.0
+    assert client.get("/api/log/2026-07-05").json()["totals"]["water_ml"] == 0
+    assert client.post("/api/log/ontem/water", json={"ml": 250}).status_code == 400
+    assert client.post(f"/api/log/{DAY}/water", json={"ml": 0}).status_code == 422
 
 
 def test_edita_refeicao(client):

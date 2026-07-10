@@ -418,6 +418,22 @@ textarea {
   margin-top: var(--s1);
 }
 
+.tile-value.over {
+  color: var(--error);
+}
+
+.water-actions {
+  display: flex;
+  gap: var(--s1);
+  flex-wrap: wrap;
+  margin-top: var(--s2);
+}
+
+.water-actions button {
+  padding: var(--s1) var(--s2);
+  font-size: 0.72rem;
+}
+
 button.ghost {
   background: transparent;
   border-style: dashed;
