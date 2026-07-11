@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://i.imgur.com/v71YxRP.png" alt="Logo Marombas Tracker" height="350">
+</p>
+
 # 🏋️ Marombas Tracker
 
 > **App no ar:** https://marombastracker.up.railway.app/
@@ -37,6 +41,22 @@ num fluxo só:
 | **Diário** | seletor de dia, tiles com metas e barras de progresso (kcal/proteína/carbo/gordura/água + calorias restantes), refeições agrupadas por horário com totais, treino com duração, descanso, badge de PR e edição inline |
 | **Evolução** | gráficos por métrica (volume, peso corporal, calorias, proteína, água, carga por exercício) com períodos de 7/30/90/365 dias, registro de peso com inicial/atual/diferença e histórico de PRs |
 | **Fotos** | fotos de evolução física (upload local) em Frente/Lado/Costas, linha do tempo por data e comparação lado a lado de duas fotos |
+
+> Landing Page
+
+ <img src="https://i.imgur.com/lifvQr8.png" alt="Landing Page" height="450" />
+
+> Tela de Chat
+
+ <img src="https://i.imgur.com/bB2QNBO.png" alt="Tela de chat" height="450" />
+
+ > Tela de Diário
+
+ <img src="https://i.imgur.com/aM1M8NM.png" alt="Tela de diário" height="450" />
+
+> Tela de Evolução
+
+ <img src="https://i.imgur.com/72sYfOF.png" alt="Tela de evolução" height="450" />
 
 ### Como a IA entra no futuro
 
