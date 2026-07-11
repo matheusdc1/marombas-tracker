@@ -1,13 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import App from './App'
-import { EMPTY_REPORT, FOODS, PROGRESS, mockFetch } from './__tests__/helpers'
+import { EMPTY_REPORT, EXERCISES, FOODS, METRICS, PHOTOS, PRS, mockFetch } from './__tests__/helpers'
 
 function setup() {
   mockFetch({
     'GET /api/foods': FOODS,
     'GET /api/log': EMPTY_REPORT,
-    'GET /api/progress': PROGRESS,
+    'GET /api/metrics': METRICS,
+    'GET /api/exercises': EXERCISES,
+    'GET /api/prs': PRS,
+    'GET /api/photos': PHOTOS,
   })
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /vamos começar/i }))
@@ -29,8 +32,11 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Diário' }))
     expect(await screen.findByText('Refeições')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Evolução' }))
-    expect(await screen.findByText('Evolução de cargas')).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Evolução' })).toBeTruthy()
     // na Evolução não existe seletor de dia
+    expect(screen.queryByLabelText('dia')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Fotos' }))
+    expect(await screen.findByRole('heading', { name: 'Fotos de evolução' })).toBeTruthy()
     expect(screen.queryByLabelText('dia')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Chat' }))
     expect(screen.getByText(/resposta simulada/i)).toBeTruthy()

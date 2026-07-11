@@ -32,6 +32,11 @@ class SetIn(BaseModel):
     sets: int = Field(gt=0)
     reps: int = Field(gt=0)
     weight_kg: float = Field(ge=0)
+    rest_s: int | None = Field(default=None, ge=0)
+
+
+class WorkoutIn(BaseModel):
+    duration_min: int = Field(gt=0)
 
 
 class FoodIn(BaseModel):
@@ -103,11 +108,14 @@ def report(day: str, db: sqlite3.Connection = Depends(get_db)):
     sets_ = [
         dict(r)
         for r in db.execute(
-            "SELECT id, exercise, sets, reps, weight_kg, sets * reps * weight_kg AS volume_kg "
-            "FROM workout_sets WHERE day = ? ORDER BY id",
+            "SELECT s.id, s.exercise, s.sets, s.reps, s.weight_kg, s.rest_s,"
+            " s.sets * s.reps * s.weight_kg AS volume_kg,"
+            " EXISTS(SELECT 1 FROM prs p WHERE p.set_id = s.id) AS is_pr"
+            " FROM workout_sets s WHERE s.day = ? ORDER BY s.id",
             (day,),
         )
     ]
+    meta = db.execute("SELECT duration_min FROM workout_meta WHERE day = ?", (day,)).fetchone()
     totals = {
         key: round(sum(m[key] for m in meals), 1)
         for key in ("kcal", "protein_g", "carbs_g", "fat_g")
@@ -117,7 +125,13 @@ def report(day: str, db: sqlite3.Connection = Depends(get_db)):
         "SELECT COALESCE(SUM(ml), 0) FROM water WHERE day = ?", (day,)
     ).fetchone()[0]
     totals["water_ml"] = round(water, 1)
-    return {"day": day, "meals": meals, "sets": sets_, "totals": totals}
+    return {
+        "day": day,
+        "meals": meals,
+        "sets": sets_,
+        "totals": totals,
+        "duration_min": meta[0] if meta else None,
+    }
 
 
 @router.post("/log/{day}/meals", status_code=201)
@@ -152,21 +166,54 @@ def delete_meal(meal_id: int, db: sqlite3.Connection = Depends(get_db)):
     return {"ok": True}
 
 
+def _record_pr(db: sqlite3.Connection, set_id: int, day: str, exercise: str, weight: float) -> bool:
+    """PR = carga acima de qualquer registro anterior do exercicio."""
+    if weight <= 0:
+        return False
+    previous = db.execute(
+        "SELECT MAX(weight_kg) FROM workout_sets WHERE exercise = ? AND id != ?",
+        (exercise, set_id),
+    ).fetchone()[0]
+    if previous is not None and weight <= previous:
+        return False
+    db.execute(
+        "INSERT INTO prs (set_id, exercise, weight_kg, day) VALUES (?, ?, ?, ?)",
+        (set_id, exercise, weight, day),
+    )
+    return True
+
+
 @router.post("/log/{day}/sets", status_code=201)
 def add_set(day: str, body: SetIn, db: sqlite3.Connection = Depends(get_db)):
     valid_day(day)
+    exercise = body.exercise.strip().lower()
     cur = db.execute(
-        "INSERT INTO workout_sets (day, exercise, sets, reps, weight_kg) VALUES (?, ?, ?, ?, ?)",
-        (day, body.exercise.strip().lower(), body.sets, body.reps, body.weight_kg),
+        "INSERT INTO workout_sets (day, exercise, sets, reps, weight_kg, rest_s)"
+        " VALUES (?, ?, ?, ?, ?, ?)",
+        (day, exercise, body.sets, body.reps, body.weight_kg, body.rest_s),
     )
-    return {"id": cur.lastrowid}
+    is_pr = _record_pr(db, cur.lastrowid, day, exercise, body.weight_kg)
+    return {"id": cur.lastrowid, "is_pr": is_pr}
+
+
+@router.put("/log/{day}/workout")
+def put_workout(day: str, body: WorkoutIn, db: sqlite3.Connection = Depends(get_db)):
+    valid_day(day)
+    db.execute(
+        "INSERT INTO workout_meta (day, duration_min) VALUES (?, ?)"
+        " ON CONFLICT(day) DO UPDATE SET duration_min = excluded.duration_min",
+        (day, body.duration_min),
+    )
+    return {"ok": True}
 
 
 @router.put("/sets/{set_id}")
 def update_set(set_id: int, body: SetIn, db: sqlite3.Connection = Depends(get_db)):
+    # edicao nao reavalia PRs (o historico registra o momento da conquista)
     updated = db.execute(
-        "UPDATE workout_sets SET exercise = ?, sets = ?, reps = ?, weight_kg = ? WHERE id = ?",
-        (body.exercise.strip().lower(), body.sets, body.reps, body.weight_kg, set_id),
+        "UPDATE workout_sets SET exercise = ?, sets = ?, reps = ?, weight_kg = ?, rest_s = ?"
+        " WHERE id = ?",
+        (body.exercise.strip().lower(), body.sets, body.reps, body.weight_kg, body.rest_s, set_id),
     ).rowcount
     if updated == 0:
         raise HTTPException(404, "serie nao encontrada")
@@ -177,6 +224,7 @@ def update_set(set_id: int, body: SetIn, db: sqlite3.Connection = Depends(get_db
 def delete_set(set_id: int, db: sqlite3.Connection = Depends(get_db)):
     if db.execute("DELETE FROM workout_sets WHERE id = ?", (set_id,)).rowcount == 0:
         raise HTTPException(404, "serie nao encontrada")
+    db.execute("DELETE FROM prs WHERE set_id = ?", (set_id,))
     return {"ok": True}
 
 
@@ -206,25 +254,6 @@ def add_water(day: str, body: WaterIn, db: sqlite3.Connection = Depends(get_db))
     return {"id": cur.lastrowid}
 
 
-@router.get("/progress")
-def progress(exercise: str = "", db: sqlite3.Connection = Depends(get_db)):
-    where, params = "", []
-    if exercise:
-        where, params = "WHERE exercise = ?", [exercise]
-    points = [
-        dict(r)
-        for r in db.execute(
-            f"SELECT day, ROUND(SUM(sets * reps * weight_kg), 1) AS volume_kg "
-            f"FROM workout_sets {where} GROUP BY day ORDER BY day",
-            params,
-        )
-    ]
-    exercises = [
-        r[0] for r in db.execute("SELECT DISTINCT exercise FROM workout_sets ORDER BY exercise")
-    ]
-    return {"exercises": exercises, "points": points}
-
-
 @router.post("/chat")
 def chat(body: ChatIn, db: sqlite3.Connection = Depends(get_db)):
     """Mock do LLM: interpreta a mensagem, registra no diario e responde um resumo."""
@@ -250,15 +279,18 @@ def chat(body: ChatIn, db: sqlite3.Connection = Depends(get_db)):
 
     set_lines, total_volume = [], 0.0
     for item in parsed["sets"]:
-        db.execute(
+        cur = db.execute(
             "INSERT INTO workout_sets (day, exercise, sets, reps, weight_kg) VALUES (?, ?, ?, ?, ?)",
             (body.day, item["exercise"], item["sets"], item["reps"], item["weight_kg"]),
         )
+        is_pr = _record_pr(db, cur.lastrowid, body.day, item["exercise"], item["weight_kg"])
         volume = item["sets"] * item["reps"] * item["weight_kg"]
         total_volume += volume
         load = f"{item['weight_kg']:g}kg" if item["weight_kg"] else "peso corporal"
+        pr_note = " — NOVO PR!" if is_pr else ""
         set_lines.append(
-            f"- {item['exercise']}: {item['sets']}x{item['reps']} @ {load} (volume {volume:g}kg)"
+            f"- {item['exercise']}: {item['sets']}x{item['reps']} @ {load}"
+            f" (volume {volume:g}kg){pr_note}"
         )
 
     parts = [f"Registrado em {body.day}:"]

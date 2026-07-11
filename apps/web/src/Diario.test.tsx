@@ -12,8 +12,24 @@ describe('Diario', () => {
     expect(screen.getByText('Carregando…')).toBeTruthy()
     expect(await screen.findByRole('cell', { name: 'frango grelhado' })).toBeTruthy()
     expect(screen.getByText('438')).toBeTruthy() // kcal total no tile
-    expect(screen.getByText('supino reto')).toBeTruthy()
+    expect(screen.getByText(/supino reto/)).toBeTruthy()
     expect(screen.getAllByText('1200').length).toBeGreaterThan(0) // volume no tile e na tabela
+    expect(screen.getByText('1h12min')).toBeTruthy() // duração do treino
+    expect(screen.getByText('Novo PR')).toBeTruthy() // badge na série
+  })
+
+  it('salva a duração do treino', async () => {
+    const fn = mockFetch({ ...ROUTES, 'PUT /api/log/2026-07-06/workout': { ok: true } })
+    render(<Diario day="2026-07-06" />)
+    await screen.findByRole('cell', { name: 'frango grelhado' })
+    expect(
+      (screen.getByLabelText('salvar duração') as HTMLButtonElement).disabled,
+    ).toBe(true)
+    fireEvent.change(screen.getByLabelText('duração em minutos'), { target: { value: '45' } })
+    fireEvent.click(screen.getByLabelText('salvar duração'))
+    await screen.findByRole('cell', { name: 'frango grelhado' })
+    const put = fn.mock.calls.find(([url]) => (url as string).includes('/workout'))!
+    expect(JSON.parse((put[1] as RequestInit).body as string)).toEqual({ duration_min: 45 })
   })
 
   it('mostra barras de progresso das metas e permite editá-las', async () => {
@@ -112,7 +128,7 @@ describe('Diario', () => {
     fireEvent.click(await screen.findByLabelText('editar supino reto'))
     fireEvent.change(screen.getByLabelText('editar carga'), { target: { value: '65' } })
     fireEvent.click(screen.getByLabelText('salvar supino reto'))
-    await screen.findByRole('cell', { name: 'supino reto' })
+    await screen.findByLabelText('editar supino reto')
     const puts = fn.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT')
     expect(puts.map(([url]) => url)).toEqual(['/api/meals/1', '/api/sets/1'])
     expect(JSON.parse((puts[0][1] as RequestInit).body as string)).toEqual({
@@ -161,7 +177,7 @@ describe('Diario', () => {
       'POST /api/log/2026-07-06/sets': { id: 9 },
     })
     render(<Diario day="2026-07-06" />)
-    await screen.findByText('supino reto')
+    await screen.findByText(/supino reto/)
     expect(
       (screen.getByRole('button', { name: 'adicionar série' }) as HTMLButtonElement).disabled,
     ).toBe(true)
@@ -170,7 +186,7 @@ describe('Diario', () => {
     fireEvent.change(screen.getByLabelText('repetições'), { target: { value: '8' } })
     fireEvent.change(screen.getByLabelText('carga em kg'), { target: { value: '50' } })
     fireEvent.click(screen.getByRole('button', { name: 'adicionar série' }))
-    await screen.findByText('supino reto')
+    await screen.findByText(/supino reto/)
     const post = fn.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'POST')!
     expect(post[0]).toBe('/api/log/2026-07-06/sets')
     expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({
@@ -178,7 +194,17 @@ describe('Diario', () => {
       sets: 4,
       reps: 8,
       weight_kg: 50,
+      rest_s: null,
     })
+    // com descanso preenchido
+    fireEvent.change(screen.getByLabelText('descanso em segundos'), { target: { value: '90' } })
+    fireEvent.click(screen.getByRole('button', { name: 'adicionar série' }))
+    await screen.findByText(/supino reto/)
+    const posts = fn.mock.calls.filter(
+      ([url, init]) =>
+        (init as RequestInit | undefined)?.method === 'POST' && (url as string).includes('/sets'),
+    )
+    expect(JSON.parse((posts[1][1] as RequestInit).body as string)).toMatchObject({ rest_s: 90 })
   })
 
   it('remove refeição e série', async () => {

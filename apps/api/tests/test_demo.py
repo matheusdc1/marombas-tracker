@@ -26,6 +26,23 @@ def test_seed_popula_e_e_idempotente(tmp_path, monkeypatch):
     assert _counts() == (meals, sets_, water)
 
 
+def test_seed_peso_duracao_e_prs(tmp_path, monkeypatch):
+    monkeypatch.setenv("MAROMBAS_DB", str(tmp_path / "demo.db"))
+    demo.seed()
+    conn = db.connect()
+    weights = conn.execute("SELECT COUNT(*) FROM body_weight").fetchone()[0]
+    durations = conn.execute("SELECT COUNT(*) FROM workout_meta").fetchone()[0]
+    prs = conn.execute("SELECT COUNT(*) FROM prs").fetchone()[0]
+    rests = conn.execute(
+        "SELECT COUNT(*) FROM workout_sets WHERE rest_s IS NOT NULL"
+    ).fetchone()[0]
+    conn.close()
+    assert weights == 14  # um peso por dia
+    assert durations > 0  # so nos dias de treino
+    assert prs > 0  # progressao de carga gera PRs
+    assert rests > 0
+
+
 def test_seed_progride_carga(tmp_path, monkeypatch):
     monkeypatch.setenv("MAROMBAS_DB", str(tmp_path / "demo.db"))
     demo.seed()

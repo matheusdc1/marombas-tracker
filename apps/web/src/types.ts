@@ -37,6 +37,8 @@ export interface SetRow {
   sets: number
   reps: number
   weight_kg: number
+  rest_s: number | null
+  is_pr: number
   volume_kg: number
 }
 
@@ -54,16 +56,34 @@ export interface Report {
   meals: MealRow[]
   sets: SetRow[]
   totals: Totals
+  duration_min: number | null
 }
 
-export interface ProgressPoint {
+export interface MetricPoint {
   day: string
-  volume_kg: number
+  value: number
 }
 
-export interface Progress {
-  exercises: string[]
-  points: ProgressPoint[]
+export interface Metrics {
+  unit: string
+  points: MetricPoint[]
+}
+
+export interface Pr {
+  exercise: string
+  weight_kg: number
+  day: string
+}
+
+export const PHOTO_CATEGORIES = ['Frente', 'Lado', 'Costas'] as const
+
+export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number]
+
+export interface Photo {
+  id: number
+  day: string
+  category: PhotoCategory
+  url: string
 }
 
 export interface ChatResult {

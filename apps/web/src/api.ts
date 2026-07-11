@@ -1,9 +1,23 @@
-import type { ChatResult, Food, Goals, MealType, Progress, Report } from './types'
+import type {
+  ChatResult,
+  Food,
+  Goals,
+  MealType,
+  Metrics,
+  Photo,
+  PhotoCategory,
+  Pr,
+  Report,
+} from './types'
+
+// em produção (Railway, front e api em serviços separados) VITE_API_URL
+// aponta para a api; em dev fica vazio e o proxy do Vite resolve /api
+export function apiUrl(path: string): string {
+  return (import.meta.env.VITE_API_URL ?? '') + path
+}
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  // em produção (Railway, front e api em serviços separados) VITE_API_URL
-  // aponta para a api; em dev fica vazio e o proxy do Vite resolve /api
-  const res = await fetch((import.meta.env.VITE_API_URL ?? '') + path, init)
+  const res = await fetch(apiUrl(path), init)
   if (!res.ok) throw new Error(`Erro ${res.status} em ${path}`)
   return res.json() as Promise<T>
 }
@@ -32,15 +46,22 @@ export const updateMeal = (id: number, food_id: number, grams: number, meal_type
 export const deleteMeal = (id: number) =>
   req<{ ok: boolean }>(`/api/meals/${id}`, { method: 'DELETE' })
 
-export const addSet = (
-  day: string,
-  set: { exercise: string; sets: number; reps: number; weight_kg: number },
-) => req<{ id: number }>(`/api/log/${day}/sets`, json(set))
+export interface SetData {
+  exercise: string
+  sets: number
+  reps: number
+  weight_kg: number
+  rest_s: number | null
+}
 
-export const updateSet = (
-  id: number,
-  set: { exercise: string; sets: number; reps: number; weight_kg: number },
-) => req<{ ok: boolean }>(`/api/sets/${id}`, { ...json(set), method: 'PUT' })
+export const addSet = (day: string, set: SetData) =>
+  req<{ id: number; is_pr: boolean }>(`/api/log/${day}/sets`, json(set))
+
+export const updateSet = (id: number, set: SetData) =>
+  req<{ ok: boolean }>(`/api/sets/${id}`, { ...json(set), method: 'PUT' })
+
+export const putWorkoutDuration = (day: string, duration_min: number) =>
+  req<{ ok: boolean }>(`/api/log/${day}/workout`, { ...json({ duration_min }), method: 'PUT' })
 
 export const deleteSet = (id: number) =>
   req<{ ok: boolean }>(`/api/sets/${id}`, { method: 'DELETE' })
@@ -53,8 +74,28 @@ export const getGoals = () => req<Goals>('/api/goals')
 export const putGoals = (goals: Goals) =>
   req<{ ok: boolean }>('/api/goals', { ...json(goals), method: 'PUT' })
 
-export const getProgress = (exercise: string) =>
-  req<Progress>(`/api/progress?exercise=${encodeURIComponent(exercise)}`)
+export const getMetrics = (metric: string, days: number, exercise: string) =>
+  req<Metrics>(`/api/metrics?metric=${metric}&days=${days}&exercise=${encodeURIComponent(exercise)}`)
+
+export const getExercises = () => req<string[]>('/api/exercises')
+
+export const getPrs = () => req<Pr[]>('/api/prs')
+
+export const addWeight = (day: string, kg: number) =>
+  req<{ id: number }>('/api/weight', json({ day, kg }))
+
+export const getPhotos = () => req<Photo[]>('/api/photos')
+
+export const uploadPhoto = (day: string, category: PhotoCategory, file: File) => {
+  const form = new FormData()
+  form.append('day', day)
+  form.append('category', category)
+  form.append('file', file)
+  return req<Photo>('/api/photos', { method: 'POST', body: form })
+}
+
+export const deletePhoto = (id: number) =>
+  req<{ ok: boolean }>(`/api/photos/${id}`, { method: 'DELETE' })
 
 export const sendChat = (day: string, message: string) =>
   req<ChatResult>('/api/chat', json({ day, message }))

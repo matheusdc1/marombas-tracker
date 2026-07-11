@@ -28,7 +28,30 @@ CREATE TABLE IF NOT EXISTS workout_sets (
     exercise TEXT NOT NULL,
     sets INTEGER NOT NULL,
     reps INTEGER NOT NULL,
-    weight_kg REAL NOT NULL
+    weight_kg REAL NOT NULL,
+    rest_s INTEGER
+);
+CREATE TABLE IF NOT EXISTS workout_meta (
+    day TEXT PRIMARY KEY,
+    duration_min INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS prs (
+    id INTEGER PRIMARY KEY,
+    set_id INTEGER NOT NULL,
+    exercise TEXT NOT NULL,
+    weight_kg REAL NOT NULL,
+    day TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS body_weight (
+    id INTEGER PRIMARY KEY,
+    day TEXT NOT NULL,
+    kg REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS photos (
+    id INTEGER PRIMARY KEY,
+    day TEXT NOT NULL,
+    category TEXT NOT NULL,
+    filename TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS goals (
     id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -74,6 +97,7 @@ def init(conn: sqlite3.Connection) -> None:
     _ensure_column(conn, "goals", "carbs_g REAL NOT NULL DEFAULT 300")
     _ensure_column(conn, "goals", "fat_g REAL NOT NULL DEFAULT 70")
     _ensure_column(conn, "meals", "meal_type TEXT NOT NULL DEFAULT 'Almoço'")
+    _ensure_column(conn, "workout_sets", "rest_s INTEGER")
     conn.execute(
         "INSERT OR IGNORE INTO goals (id, kcal, protein_g, water_ml, carbs_g, fat_g)"
         " VALUES (1, 2500, 150, 4000, 300, 70)"

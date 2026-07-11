@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   CalendarDays,
+  Camera,
   ChevronLeft,
   ChevronRight,
   Dumbbell,
@@ -11,12 +12,14 @@ import { todayIso } from './api'
 import Chat from './Chat'
 import Diario from './Diario'
 import Evolucao from './Evolucao'
+import Fotos from './Fotos'
 import Landing from './Landing'
 
 const TABS = [
   { name: 'Chat', icon: MessageCircle },
   { name: 'Diário', icon: CalendarDays },
   { name: 'Evolução', icon: TrendingUp },
+  { name: 'Fotos', icon: Camera },
 ] as const
 
 type Tab = (typeof TABS)[number]['name']
@@ -56,7 +59,7 @@ export default function App() {
               </button>
             ))}
           </nav>
-          {tab !== 'Evolução' && (
+          {(tab === 'Chat' || tab === 'Diário') && (
             <div className="day-picker">
               <button aria-label="dia anterior" onClick={() => shiftDay(-1)}>
                 <ChevronLeft size={18} aria-hidden />
@@ -77,6 +80,7 @@ export default function App() {
       {tab === 'Chat' && <Chat day={day} />}
       {tab === 'Diário' && <Diario day={day} />}
       {tab === 'Evolução' && <Evolucao />}
+      {tab === 'Fotos' && <Fotos />}
     </div>
   )
 }

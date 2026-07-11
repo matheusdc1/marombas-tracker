@@ -46,6 +46,9 @@ def seed(days: int = 14, force: bool = False) -> str:
         conn.execute("DELETE FROM meals")
         conn.execute("DELETE FROM workout_sets")
         conn.execute("DELETE FROM water")
+        conn.execute("DELETE FROM prs")
+        conn.execute("DELETE FROM body_weight")
+        conn.execute("DELETE FROM workout_meta")
         food_ids = {
             name: conn.execute("SELECT id FROM foods WHERE name = ?", (name,)).fetchone()[0]
             for name, _, _ in DAILY_MEALS
@@ -62,17 +65,33 @@ def seed(days: int = 14, force: bool = False) -> str:
             conn.execute(
                 "INSERT INTO water (day, ml) VALUES (?, ?)", (day, 2000 + index % 4 * 500)
             )
+            conn.execute(
+                "INSERT INTO body_weight (day, kg) VALUES (?, ?)",
+                (day, round(83.0 - index * 0.1, 1)),
+            )
             split = SPLITS[index % len(SPLITS)]
             if split is None:
                 continue
             week = index // 7
+            conn.execute(
+                "INSERT INTO workout_meta (day, duration_min) VALUES (?, ?)",
+                (day, 60 + index % 3 * 8),
+            )
             for exercise, sets_, reps, weight in split:
                 load = weight + week * 2.5 if weight else 0.0
-                conn.execute(
-                    "INSERT INTO workout_sets (day, exercise, sets, reps, weight_kg)"
-                    " VALUES (?, ?, ?, ?, ?)",
-                    (day, exercise, sets_, reps, load),
+                previous = conn.execute(
+                    "SELECT MAX(weight_kg) FROM workout_sets WHERE exercise = ?", (exercise,)
+                ).fetchone()[0]
+                cur = conn.execute(
+                    "INSERT INTO workout_sets (day, exercise, sets, reps, weight_kg, rest_s)"
+                    " VALUES (?, ?, ?, ?, ?, ?)",
+                    (day, exercise, sets_, reps, load, 90),
                 )
+                if load > 0 and (previous is None or load > previous):
+                    conn.execute(
+                        "INSERT INTO prs (set_id, exercise, weight_kg, day) VALUES (?, ?, ?, ?)",
+                        (cur.lastrowid, exercise, load, day),
+                    )
         conn.commit()
         return f"demo: {days} dias populados ate {today.isoformat()}"
     finally:

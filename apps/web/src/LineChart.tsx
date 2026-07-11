@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { PointerEvent } from 'react'
-import type { ProgressPoint } from './types'
+import type { MetricPoint } from './types'
 
 const W = 640
 const H = 280
@@ -13,10 +13,16 @@ function niceStep(rough: number): number {
   return [1, 2, 2.5, 5, 10].map((m) => m * pow).find((c) => c >= rough)!
 }
 
-export default function LineChart({ points }: { points: ProgressPoint[] }) {
+interface Props {
+  points: MetricPoint[]
+  unit: string
+  label: string
+}
+
+export default function LineChart({ points, unit, label }: Props) {
   const [hover, setHover] = useState<number | null>(null)
 
-  const yMax = Math.max(...points.map((p) => p.volume_kg), 1)
+  const yMax = Math.max(...points.map((p) => p.value), 1)
   const step = niceStep(yMax / 4)
   const yTop = step * Math.ceil(yMax / step)
   const ticks = Array.from({ length: Math.round(yTop / step) + 1 }, (_, i) => i * step)
@@ -25,7 +31,7 @@ export default function LineChart({ points }: { points: ProgressPoint[] }) {
   const x = (i: number) =>
     PAD.left + (points.length === 1 ? INNER_W / 2 : (i * INNER_W) / (points.length - 1))
   const y = (v: number) => PAD.top + INNER_H - (v / yTop) * INNER_H
-  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(p.volume_kg)}`).join(' ')
+  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(p.value)}`).join(' ')
 
   function onMove(e: PointerEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -43,7 +49,7 @@ export default function LineChart({ points }: { points: ProgressPoint[] }) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label="Evolução do volume total de treino por dia, em quilos"
+        aria-label={label}
         onPointerMove={onMove}
         onPointerLeave={() => setHover(null)}
       >
@@ -82,7 +88,7 @@ export default function LineChart({ points }: { points: ProgressPoint[] }) {
           <circle
             key={p.day}
             cx={x(i)}
-            cy={y(p.volume_kg)}
+            cy={y(p.value)}
             r={hover === i ? 6 : 4}
             className="series-dot"
           />
@@ -90,7 +96,7 @@ export default function LineChart({ points }: { points: ProgressPoint[] }) {
       </svg>
       {hover != null && (
         <figcaption className="tooltip" role="status">
-          {points[hover].day}: {points[hover].volume_kg} kg
+          {points[hover].day}: {points[hover].value} {unit}
         </figcaption>
       )}
       <details>
@@ -99,14 +105,14 @@ export default function LineChart({ points }: { points: ProgressPoint[] }) {
           <thead>
             <tr>
               <th>Dia</th>
-              <th>Volume (kg)</th>
+              <th>Valor ({unit})</th>
             </tr>
           </thead>
           <tbody>
             {points.map((p) => (
               <tr key={p.day}>
                 <td>{p.day}</td>
-                <td>{p.volume_kg}</td>
+                <td>{p.value}</td>
               </tr>
             ))}
           </tbody>

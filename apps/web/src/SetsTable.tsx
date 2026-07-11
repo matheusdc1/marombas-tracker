@@ -1,13 +1,7 @@
 import { useState } from 'react'
-import { Check, Pencil, Trash2, X } from 'lucide-react'
+import { Check, Pencil, Trash2, Trophy, X } from 'lucide-react'
+import type { SetData } from './api'
 import type { SetRow } from './types'
-
-interface SetData {
-  exercise: string
-  sets: number
-  reps: number
-  weight_kg: number
-}
 
 interface Props {
   sets: SetRow[]
@@ -17,7 +11,7 @@ interface Props {
 
 export default function SetsTable({ sets, onUpdate, onDelete }: Props) {
   const [editing, setEditing] = useState<number | null>(null)
-  const [form, setForm] = useState({ exercise: '', sets: '', reps: '', weight: '' })
+  const [form, setForm] = useState({ exercise: '', sets: '', reps: '', weight: '', rest: '' })
 
   function startEdit(row: SetRow) {
     setEditing(row.id)
@@ -26,6 +20,7 @@ export default function SetsTable({ sets, onUpdate, onDelete }: Props) {
       sets: String(row.sets),
       reps: String(row.reps),
       weight: String(row.weight_kg),
+      rest: row.rest_s != null ? String(row.rest_s) : '',
     })
   }
 
@@ -35,6 +30,7 @@ export default function SetsTable({ sets, onUpdate, onDelete }: Props) {
       sets: Number(form.sets),
       reps: Number(form.reps),
       weight_kg: Number(form.weight),
+      rest_s: form.rest ? Number(form.rest) : null,
     })
     setEditing(null)
   }
@@ -51,6 +47,7 @@ export default function SetsTable({ sets, onUpdate, onDelete }: Props) {
           <th>Séries</th>
           <th>Reps</th>
           <th>Carga (kg)</th>
+          <th>Descanso</th>
           <th>Volume (kg)</th>
           <th></th>
         </tr>
@@ -94,6 +91,15 @@ export default function SetsTable({ sets, onUpdate, onDelete }: Props) {
                   onChange={(e) => setForm({ ...form, weight: e.target.value })}
                 />
               </td>
+              <td>
+                <input
+                  aria-label="editar descanso"
+                  type="number"
+                  min="0"
+                  value={form.rest}
+                  onChange={(e) => setForm({ ...form, rest: e.target.value })}
+                />
+              </td>
               <td colSpan={2} className="row-actions">
                 <button aria-label={`salvar ${s.exercise}`} onClick={() => save(s.id)}>
                   <Check size={14} aria-hidden />
@@ -105,10 +111,19 @@ export default function SetsTable({ sets, onUpdate, onDelete }: Props) {
             </tr>
           ) : (
             <tr key={s.id}>
-              <td>{s.exercise}</td>
+              <td>
+                {s.exercise}
+                {s.is_pr ? (
+                  <span className="pr-badge">
+                    <Trophy size={11} aria-hidden />
+                    Novo PR
+                  </span>
+                ) : null}
+              </td>
               <td>{s.sets}</td>
               <td>{s.reps}</td>
               <td>{s.weight_kg}</td>
+              <td>{s.rest_s != null ? `${s.rest_s}s` : '—'}</td>
               <td>{s.volume_kg}</td>
               <td className="row-actions">
                 <button aria-label={`editar ${s.exercise}`} onClick={() => startEdit(s)}>

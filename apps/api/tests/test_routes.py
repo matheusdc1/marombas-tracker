@@ -1,6 +1,12 @@
+from datetime import date, timedelta
+
 from tests.test_parser import EXAMPLE
 
 DAY = "2026-07-06"
+
+
+def _d(days_ago: int) -> str:
+    return (date.today() - timedelta(days=days_ago)).isoformat()
 
 
 def test_health(client):
@@ -40,25 +46,83 @@ def test_dia_invalido(client):
     assert client.get("/api/log/ontem").status_code == 400
 
 
-def test_crud_series_e_progresso(client):
-    for day, weight in [("2026-07-01", 60), ("2026-07-03", 70)]:
+def test_crud_series_e_metricas(client):
+    for days_ago, weight in [(3, 60), (1, 70)]:
         r = client.post(
-            f"/api/log/{day}/sets",
+            f"/api/log/{_d(days_ago)}/sets",
             json={"exercise": "Supino Reto", "sets": 2, "reps": 10, "weight_kg": weight},
         )
         assert r.status_code == 201
-    progress = client.get("/api/progress").json()
-    assert progress["exercises"] == ["supino reto"]
-    assert progress["points"] == [
-        {"day": "2026-07-01", "volume_kg": 1200.0},
-        {"day": "2026-07-03", "volume_kg": 1400.0},
+    volume = client.get("/api/metrics", params={"metric": "volume", "days": 7}).json()
+    assert volume["unit"] == "kg"
+    assert volume["points"] == [
+        {"day": _d(3), "value": 1200.0},
+        {"day": _d(1), "value": 1400.0},
     ]
-    filtered = client.get("/api/progress", params={"exercise": "supino reto"}).json()
-    assert filtered["points"] == progress["points"]
-    assert client.get("/api/progress", params={"exercise": "remada"}).json()["points"] == []
-    set_id = client.get("/api/log/2026-07-01").json()["sets"][0]["id"]
+    # o filtro de período corta os pontos antigos
+    recent = client.get("/api/metrics", params={"metric": "volume", "days": 2}).json()
+    assert recent["points"] == [{"day": _d(1), "value": 1400.0}]
+    exercicio = client.get(
+        "/api/metrics", params={"metric": "exercicio", "exercise": "supino reto", "days": 7}
+    ).json()
+    assert exercicio["points"] == [{"day": _d(3), "value": 60.0}, {"day": _d(1), "value": 70.0}]
+    assert client.get("/api/exercises").json() == ["supino reto"]
+    assert client.get("/api/metrics", params={"metric": "inexistente"}).status_code == 422
+    set_id = client.get(f"/api/log/{_d(3)}").json()["sets"][0]["id"]
     assert client.delete(f"/api/sets/{set_id}").json() == {"ok": True}
     assert client.delete(f"/api/sets/{set_id}").status_code == 404
+
+
+def test_duracao_do_treino(client):
+    assert client.get(f"/api/log/{DAY}").json()["duration_min"] is None
+    assert client.put(f"/api/log/{DAY}/workout", json={"duration_min": 72}).json() == {"ok": True}
+    assert client.get(f"/api/log/{DAY}").json()["duration_min"] == 72
+    client.put(f"/api/log/{DAY}/workout", json={"duration_min": 45})  # upsert
+    assert client.get(f"/api/log/{DAY}").json()["duration_min"] == 45
+    assert client.put("/api/log/ontem/workout", json={"duration_min": 10}).status_code == 400
+
+
+def test_descanso_e_pr(client):
+    first = client.post(
+        f"/api/log/{DAY}/sets",
+        json={"exercise": "supino", "sets": 3, "reps": 10, "weight_kg": 60, "rest_s": 90},
+    ).json()
+    assert first["is_pr"] is True  # primeiro registro do exercício conta
+    lighter = client.post(
+        f"/api/log/{DAY}/sets",
+        json={"exercise": "supino", "sets": 3, "reps": 10, "weight_kg": 50},
+    ).json()
+    assert lighter["is_pr"] is False
+    heavier = client.post(
+        f"/api/log/{DAY}/sets",
+        json={"exercise": "supino", "sets": 3, "reps": 8, "weight_kg": 70, "rest_s": 120},
+    ).json()
+    assert heavier["is_pr"] is True
+    bodyweight = client.post(
+        f"/api/log/{DAY}/sets",
+        json={"exercise": "barra fixa", "sets": 3, "reps": 8, "weight_kg": 0},
+    ).json()
+    assert bodyweight["is_pr"] is False  # peso corporal não gera PR
+    sets_ = client.get(f"/api/log/{DAY}").json()["sets"]
+    assert [s["is_pr"] for s in sets_] == [1, 0, 1, 0]
+    assert sets_[0]["rest_s"] == 90
+    assert sets_[1]["rest_s"] is None
+    prs = client.get("/api/prs").json()
+    assert [(p["exercise"], p["weight_kg"]) for p in prs] == [("supino", 70.0), ("supino", 60.0)]
+    # apagar a série remove o PR dela do histórico
+    client.delete(f"/api/sets/{sets_[2]['id']}")
+    remaining = client.get("/api/prs").json()
+    assert [(p["exercise"], p["weight_kg"]) for p in remaining] == [("supino", 60.0)]
+
+
+def test_chat_anuncia_pr(client):
+    data = client.post("/api/chat", json={"message": "fiz supino 3x10 100kg", "day": DAY}).json()
+    assert "NOVO PR" in data["reply"]
+
+
+def test_peso_corporal(client):
+    assert client.post("/api/weight", json={"day": DAY, "kg": 82.5}).status_code == 201
+    assert client.post("/api/weight", json={"day": "ontem", "kg": 82}).status_code == 400
 
 
 def test_chat_exemplo_completo(client):

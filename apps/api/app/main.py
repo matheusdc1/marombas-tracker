@@ -3,6 +3,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .metrics import router as metrics_router
+from .photos import router as photos_router
 from .routes import router
 
 app = FastAPI(title="Marombas Tracker API")
@@ -16,3 +18,5 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(metrics_router)
+app.include_router(photos_router)

@@ -33,9 +33,10 @@ num fluxo só:
 
 | Aba | O que tem |
 |-----|-----------|
-| **Chat** | conversa em linguagem natural; a resposta (simulada) mostra o que foi registrado, com kcal e macros por item |
-| **Diário** | seletor de dia (calendário + setas), tiles de totais (kcal/proteína/carbo/gordura/volume), tabela de refeições e tabela de treino com adicionar/remover manual |
-| **Evolução** | gráfico de linha do volume de treino por dia (volume = séries × reps × carga), filtro por exercício, recorde, tabela de dados acessível |
+| **Chat** | conversa em linguagem natural; a resposta (simulada) mostra o que foi registrado, com kcal, macros e avisos de novo PR |
+| **Diário** | seletor de dia, tiles com metas e barras de progresso (kcal/proteína/carbo/gordura/água + calorias restantes), refeições agrupadas por horário com totais, treino com duração, descanso, badge de PR e edição inline |
+| **Evolução** | gráficos por métrica (volume, peso corporal, calorias, proteína, água, carga por exercício) com períodos de 7/30/90/365 dias, registro de peso com inicial/atual/diferença e histórico de PRs |
+| **Fotos** | fotos de evolução física (upload local) em Frente/Lado/Costas, linha do tempo por data e comparação lado a lado de duas fotos |
 
 ### Como a IA entra no futuro
 
@@ -72,8 +73,11 @@ scripts/gate.py     # gate de qualidade (ver abaixo)
 | GET | `/api/log/{dia}` | relatório do dia: refeições + treino + totais |
 | POST/PUT/DELETE | `/api/log/{dia}/meals`, `/api/meals/{id}` | CRUD completo de refeições |
 | POST/PUT/DELETE | `/api/log/{dia}/sets`, `/api/sets/{id}` | CRUD completo de séries |
-| GET/PUT | `/api/goals` | metas diárias de kcal e proteína |
-| GET | `/api/progress?exercise=` | volume (kg) por dia, p/ o gráfico |
+| GET/PUT | `/api/goals` | metas diárias (kcal, proteína, carbo, gordura, água) |
+| POST | `/api/log/{dia}/water`, PUT `/api/log/{dia}/workout` | água e duração do treino |
+| GET | `/api/metrics?metric=&days=&exercise=` | séries temporais p/ os gráficos |
+| GET/POST | `/api/prs`, `/api/weight` | histórico de PRs e peso corporal |
+| POST/GET/DELETE | `/api/photos` (+ `/api/photos/file/{arquivo}`) | fotos de evolução (upload local) |
 | POST | `/api/chat` | **mock do LLM**: interpreta a mensagem, registra e responde |
 
 Dados de demonstração (~2 semanas de diário e treinos com progressão de carga):

@@ -11,6 +11,7 @@ import {
   GlassWater,
   Plus,
   Target,
+  Timer,
   Wheat,
 } from 'lucide-react'
 import {
@@ -23,6 +24,7 @@ import {
   getGoals,
   getReport,
   putGoals,
+  putWorkoutDuration,
   updateMeal,
   updateSet,
 } from './api'
@@ -43,6 +45,8 @@ export default function Diario({ day }: { day: string }) {
   const [sets, setSets] = useState('3')
   const [reps, setReps] = useState('10')
   const [weight, setWeight] = useState('20')
+  const [rest, setRest] = useState('')
+  const [durationMin, setDurationMin] = useState('')
   const [editingGoals, setEditingGoals] = useState(false)
   const [goalKcal, setGoalKcal] = useState('')
   const [goalProtein, setGoalProtein] = useState('')
@@ -84,8 +88,14 @@ export default function Diario({ day }: { day: string }) {
         sets: Number(sets),
         reps: Number(reps),
         weight_kg: Number(weight),
+        rest_s: rest ? Number(rest) : null,
       }),
     )
+  }
+
+  const fmtDuration = (minutes: number) => {
+    const h = Math.floor(minutes / 60)
+    return h > 0 ? `${h}h${String(minutes % 60).padStart(2, '0')}min` : `${minutes}min`
   }
 
   function openGoals(current: Goals) {
@@ -366,6 +376,30 @@ export default function Diario({ day }: { day: string }) {
           </form>
 
           <h3>Treino</h3>
+          <div className="workout-meta">
+            <Timer size={14} aria-hidden />
+            <span>Duração:</span>
+            {report.duration_min != null ? (
+              <strong>{fmtDuration(report.duration_min)}</strong>
+            ) : (
+              <span>—</span>
+            )}
+            <input
+              aria-label="duração em minutos"
+              type="number"
+              min="1"
+              placeholder="min"
+              value={durationMin}
+              onChange={(e) => setDurationMin(e.target.value)}
+            />
+            <button
+              aria-label="salvar duração"
+              disabled={!durationMin}
+              onClick={() => void run(() => putWorkoutDuration(day, Number(durationMin)))}
+            >
+              <Check size={14} aria-hidden />
+            </button>
+          </div>
           <SetsTable
             sets={report.sets}
             onUpdate={(id, data) => void run(() => updateSet(id, data))}
@@ -399,6 +433,14 @@ export default function Diario({ day }: { day: string }) {
               step="0.5"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
+            />
+            <input
+              aria-label="descanso em segundos"
+              type="number"
+              min="0"
+              placeholder="descanso (s)"
+              value={rest}
+              onChange={(e) => setRest(e.target.value)}
             />
             <button aria-label="adicionar série" disabled={!exercise.trim()}>
               <Plus size={16} aria-hidden />
