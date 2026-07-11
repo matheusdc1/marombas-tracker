@@ -131,9 +131,17 @@ button {
   font-weight: 500;
 }
 
-button:hover:not(:disabled):not(.active) {
+/* :where zera a especificidade: este hover generico e o fallback dos botoes
+   secundarios e nunca vence os botoes accent (CTA, submits, aba ativa) */
+button:where(:hover:not(:disabled):not(.active)) {
   border-color: var(--line-strong);
   background: var(--accent-wash);
+}
+
+.day-picker button:hover:not(:disabled),
+.water-actions button:hover:not(:disabled) {
+  background: var(--accent-wash);
+  border-color: var(--line-strong);
 }
 
 button:disabled {
