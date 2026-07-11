@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS meals (
     id INTEGER PRIMARY KEY,
     day TEXT NOT NULL,
     food_id INTEGER NOT NULL REFERENCES foods(id),
-    grams REAL NOT NULL
+    grams REAL NOT NULL,
+    meal_type TEXT NOT NULL DEFAULT 'Almoço'
 );
 CREATE TABLE IF NOT EXISTS workout_sets (
     id INTEGER PRIMARY KEY,
@@ -33,7 +34,9 @@ CREATE TABLE IF NOT EXISTS goals (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     kcal REAL NOT NULL,
     protein_g REAL NOT NULL,
-    water_ml REAL NOT NULL DEFAULT 4000
+    water_ml REAL NOT NULL DEFAULT 4000,
+    carbs_g REAL NOT NULL DEFAULT 300,
+    fat_g REAL NOT NULL DEFAULT 70
 );
 CREATE TABLE IF NOT EXISTS water (
     id INTEGER PRIMARY KEY,
@@ -66,14 +69,23 @@ def init(conn: sqlite3.Connection) -> None:
             "INSERT INTO foods (name, kcal, protein_g, carbs_g, fat_g) VALUES (?, ?, ?, ?, ?)",
             FOODS,
         )
-    try:  # migracao: bancos criados antes da meta de agua
-        conn.execute("ALTER TABLE goals ADD COLUMN water_ml REAL NOT NULL DEFAULT 4000")
-    except sqlite3.OperationalError:
-        pass  # coluna ja existe
+    # migracoes: bancos criados antes de cada coluna nova
+    _ensure_column(conn, "goals", "water_ml REAL NOT NULL DEFAULT 4000")
+    _ensure_column(conn, "goals", "carbs_g REAL NOT NULL DEFAULT 300")
+    _ensure_column(conn, "goals", "fat_g REAL NOT NULL DEFAULT 70")
+    _ensure_column(conn, "meals", "meal_type TEXT NOT NULL DEFAULT 'Almoço'")
     conn.execute(
-        "INSERT OR IGNORE INTO goals (id, kcal, protein_g, water_ml) VALUES (1, 2500, 150, 4000)"
+        "INSERT OR IGNORE INTO goals (id, kcal, protein_g, water_ml, carbs_g, fat_g)"
+        " VALUES (1, 2500, 150, 4000, 300, 70)"
     )
     conn.commit()
+
+
+def _ensure_column(conn: sqlite3.Connection, table: str, ddl: str) -> None:
+    try:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+    except sqlite3.OperationalError:
+        pass  # coluna ja existe
 
 
 def get_db():

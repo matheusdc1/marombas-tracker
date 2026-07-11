@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import date
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -8,6 +9,8 @@ from . import parser
 from .db import get_db
 
 router = APIRouter(prefix="/api")
+
+MealType = Literal["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"]
 
 
 def valid_day(day: str) -> str:
@@ -21,6 +24,7 @@ def valid_day(day: str) -> str:
 class MealIn(BaseModel):
     food_id: int
     grams: float = Field(gt=0)
+    meal_type: MealType = "Almoço"
 
 
 class SetIn(BaseModel):
@@ -47,6 +51,8 @@ class GoalsIn(BaseModel):
     kcal: float = Field(gt=0)
     protein_g: float = Field(gt=0)
     water_ml: float = Field(gt=0)
+    carbs_g: float = Field(gt=0)
+    fat_g: float = Field(gt=0)
 
 
 class WaterIn(BaseModel):
@@ -84,7 +90,7 @@ def report(day: str, db: sqlite3.Connection = Depends(get_db)):
     meals = [
         dict(r)
         for r in db.execute(
-            """SELECT m.id, m.food_id, f.name, m.grams,
+            """SELECT m.id, m.food_id, m.meal_type, f.name, m.grams,
                       ROUND(f.kcal * m.grams / 100, 1) AS kcal,
                       ROUND(f.protein_g * m.grams / 100, 1) AS protein_g,
                       ROUND(f.carbs_g * m.grams / 100, 1) AS carbs_g,
@@ -120,8 +126,8 @@ def add_meal(day: str, body: MealIn, db: sqlite3.Connection = Depends(get_db)):
     if not db.execute("SELECT 1 FROM foods WHERE id = ?", (body.food_id,)).fetchone():
         raise HTTPException(404, "alimento nao encontrado")
     cur = db.execute(
-        "INSERT INTO meals (day, food_id, grams) VALUES (?, ?, ?)",
-        (day, body.food_id, body.grams),
+        "INSERT INTO meals (day, food_id, grams, meal_type) VALUES (?, ?, ?, ?)",
+        (day, body.food_id, body.grams, body.meal_type),
     )
     return {"id": cur.lastrowid}
 
@@ -131,8 +137,8 @@ def update_meal(meal_id: int, body: MealIn, db: sqlite3.Connection = Depends(get
     if not db.execute("SELECT 1 FROM foods WHERE id = ?", (body.food_id,)).fetchone():
         raise HTTPException(404, "alimento nao encontrado")
     updated = db.execute(
-        "UPDATE meals SET food_id = ?, grams = ? WHERE id = ?",
-        (body.food_id, body.grams, meal_id),
+        "UPDATE meals SET food_id = ?, grams = ?, meal_type = ? WHERE id = ?",
+        (body.food_id, body.grams, body.meal_type, meal_id),
     ).rowcount
     if updated == 0:
         raise HTTPException(404, "refeicao nao encontrada")
@@ -177,15 +183,18 @@ def delete_set(set_id: int, db: sqlite3.Connection = Depends(get_db)):
 @router.get("/goals")
 def get_goals(db: sqlite3.Connection = Depends(get_db)):
     return dict(
-        db.execute("SELECT kcal, protein_g, water_ml FROM goals WHERE id = 1").fetchone()
+        db.execute(
+            "SELECT kcal, protein_g, water_ml, carbs_g, fat_g FROM goals WHERE id = 1"
+        ).fetchone()
     )
 
 
 @router.put("/goals")
 def put_goals(body: GoalsIn, db: sqlite3.Connection = Depends(get_db)):
     db.execute(
-        "UPDATE goals SET kcal = ?, protein_g = ?, water_ml = ? WHERE id = 1",
-        (body.kcal, body.protein_g, body.water_ml),
+        "UPDATE goals SET kcal = ?, protein_g = ?, water_ml = ?, carbs_g = ?, fat_g = ?"
+        " WHERE id = 1",
+        (body.kcal, body.protein_g, body.water_ml, body.carbs_g, body.fat_g),
     )
     return {"ok": True}
 
@@ -227,8 +236,8 @@ def chat(body: ChatIn, db: sqlite3.Connection = Depends(get_db)):
     for meal in parsed["meals"]:
         food, grams = meal["food"], meal["grams"]
         db.execute(
-            "INSERT INTO meals (day, food_id, grams) VALUES (?, ?, ?)",
-            (body.day, food["id"], grams),
+            "INSERT INTO meals (day, food_id, grams, meal_type) VALUES (?, ?, ?, ?)",
+            (body.day, food["id"], grams, meal["meal_type"]),
         )
         kcal = food["kcal"] * grams / 100
         total_kcal += kcal

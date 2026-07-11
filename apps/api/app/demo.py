@@ -10,17 +10,17 @@ from datetime import date, timedelta
 
 from .db import connect
 
-# refeicoes de um dia tipico (nome exato da tabela TACO, gramas)
+# refeicoes de um dia tipico (nome exato da tabela TACO, gramas, refeicao)
 DAILY_MEALS = [
-    ("aveia em flocos", 60),
-    ("banana", 120),
-    ("leite integral", 300),
-    ("arroz branco cozido", 250),
-    ("feijão carioca cozido", 140),
-    ("frango grelhado", 200),
-    ("batata doce cozida", 200),
-    ("carne patinho grelhado", 150),
-    ("whey protein", 30),
+    ("aveia em flocos", 60, "Café da manhã"),
+    ("banana", 120, "Café da manhã"),
+    ("leite integral", 300, "Café da manhã"),
+    ("arroz branco cozido", 250, "Almoço"),
+    ("feijão carioca cozido", 140, "Almoço"),
+    ("frango grelhado", 200, "Almoço"),
+    ("whey protein", 30, "Lanche"),
+    ("batata doce cozida", 200, "Jantar"),
+    ("carne patinho grelhado", 150, "Jantar"),
 ]
 
 # rotacao A / B / descanso; a carga progride 2,5kg por semana
@@ -48,16 +48,16 @@ def seed(days: int = 14, force: bool = False) -> str:
         conn.execute("DELETE FROM water")
         food_ids = {
             name: conn.execute("SELECT id FROM foods WHERE name = ?", (name,)).fetchone()[0]
-            for name, _ in DAILY_MEALS
+            for name, _, _ in DAILY_MEALS
         }
         today = date.today()
         for offset in range(days - 1, -1, -1):
             day = (today - timedelta(days=offset)).isoformat()
             index = days - 1 - offset  # 0 = dia mais antigo
-            for name, grams in DAILY_MEALS:
+            for name, grams, meal_type in DAILY_MEALS:
                 conn.execute(
-                    "INSERT INTO meals (day, food_id, grams) VALUES (?, ?, ?)",
-                    (day, food_ids[name], grams + index % 3 * 10),
+                    "INSERT INTO meals (day, food_id, grams, meal_type) VALUES (?, ?, ?, ?)",
+                    (day, food_ids[name], grams + index % 3 * 10, meal_type),
                 )
             conn.execute(
                 "INSERT INTO water (day, ml) VALUES (?, ?)", (day, 2000 + index % 4 * 500)

@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Check, Pencil, Trash2, X } from 'lucide-react'
-import type { Food, MealRow } from './types'
+import type { Food, MealRow, MealType } from './types'
 
 interface Props {
   meals: MealRow[]
   foods: Food[]
-  onUpdate: (id: number, food_id: number, grams: number) => void
+  onUpdate: (id: number, food_id: number, grams: number, meal_type: MealType) => void
   onDelete: (id: number) => void
 }
 
@@ -20,8 +20,8 @@ export default function MealsTable({ meals, foods, onUpdate, onDelete }: Props) 
     setGrams(String(meal.grams))
   }
 
-  function save(id: number) {
-    onUpdate(id, Number(foodId), Number(grams))
+  function save(meal: MealRow) {
+    onUpdate(meal.id, Number(foodId), Number(grams), meal.meal_type)
     setEditing(null)
   }
 
@@ -69,7 +69,7 @@ export default function MealsTable({ meals, foods, onUpdate, onDelete }: Props) 
                 />
               </td>
               <td colSpan={5} className="row-actions">
-                <button aria-label={`salvar ${m.name}`} onClick={() => save(m.id)}>
+                <button aria-label={`salvar ${m.name}`} onClick={() => save(m)}>
                   <Check size={14} aria-hidden />
                 </button>
                 <button aria-label="cancelar edição" onClick={() => setEditing(null)}>

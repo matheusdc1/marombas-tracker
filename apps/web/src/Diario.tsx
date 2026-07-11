@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import {
   Beef,
   Check,
+  ChevronDown,
   Droplets,
   Dumbbell,
   Flame,
@@ -27,7 +28,8 @@ import {
 } from './api'
 import MealsTable from './MealsTable'
 import SetsTable from './SetsTable'
-import type { Food, Goals, Report } from './types'
+import { MEAL_TYPES } from './types'
+import type { Food, Goals, MealType, Report } from './types'
 
 export default function Diario({ day }: { day: string }) {
   const [report, setReport] = useState<Report | null>(null)
@@ -36,6 +38,7 @@ export default function Diario({ day }: { day: string }) {
   const [error, setError] = useState('')
   const [foodId, setFoodId] = useState('')
   const [grams, setGrams] = useState('100')
+  const [mealType, setMealType] = useState<MealType>('Almoço')
   const [exercise, setExercise] = useState('')
   const [sets, setSets] = useState('3')
   const [reps, setReps] = useState('10')
@@ -44,6 +47,8 @@ export default function Diario({ day }: { day: string }) {
   const [goalKcal, setGoalKcal] = useState('')
   const [goalProtein, setGoalProtein] = useState('')
   const [goalWater, setGoalWater] = useState('')
+  const [goalCarbs, setGoalCarbs] = useState('')
+  const [goalFat, setGoalFat] = useState('')
 
   async function run(action?: () => Promise<unknown>) {
     try {
@@ -68,7 +73,7 @@ export default function Diario({ day }: { day: string }) {
 
   function submitMeal(e: FormEvent) {
     e.preventDefault()
-    void run(() => addMeal(day, Number(foodId), Number(grams)))
+    void run(() => addMeal(day, Number(foodId), Number(grams), mealType))
   }
 
   function submitSet(e: FormEvent) {
@@ -87,6 +92,8 @@ export default function Diario({ day }: { day: string }) {
     setGoalKcal(String(current.kcal))
     setGoalProtein(String(current.protein_g))
     setGoalWater(String(current.water_ml))
+    setGoalCarbs(String(current.carbs_g))
+    setGoalFat(String(current.fat_g))
     setEditingGoals(true)
   }
 
@@ -97,6 +104,8 @@ export default function Diario({ day }: { day: string }) {
         kcal: Number(goalKcal),
         protein_g: Number(goalProtein),
         water_ml: Number(goalWater),
+        carbs_g: Number(goalCarbs),
+        fat_g: Number(goalFat),
       })
       setGoals(await getGoals())
       setEditingGoals(false)
@@ -114,8 +123,14 @@ export default function Diario({ day }: { day: string }) {
       value: report.totals.protein_g,
       goal: goals?.protein_g,
     },
-    { label: 'Carboidrato', unit: 'g', icon: Wheat, value: report.totals.carbs_g },
-    { label: 'Gordura', unit: 'g', icon: Droplets, value: report.totals.fat_g },
+    {
+      label: 'Carboidrato',
+      unit: 'g',
+      icon: Wheat,
+      value: report.totals.carbs_g,
+      goal: goals?.carbs_g,
+    },
+    { label: 'Gordura', unit: 'g', icon: Droplets, value: report.totals.fat_g, goal: goals?.fat_g },
     { label: 'Volume de treino', unit: 'kg', icon: Dumbbell, value: report.totals.volume_kg },
   ]
 
@@ -154,7 +169,7 @@ export default function Diario({ day }: { day: string }) {
                       />
                     </div>
                     <span className="tile-goal">
-                      meta: {goal} {unit}
+                      {value} / {goal} {unit}
                     </span>
                   </>
                 )}
@@ -227,28 +242,57 @@ export default function Diario({ day }: { day: string }) {
             </button>
           )}
           {editingGoals && (
-            <form className="add-form" onSubmit={submitGoals}>
-              <input
-                aria-label="meta de calorias"
-                type="number"
-                min="1"
-                value={goalKcal}
-                onChange={(e) => setGoalKcal(e.target.value)}
-              />
-              <input
-                aria-label="meta de proteína"
-                type="number"
-                min="1"
-                value={goalProtein}
-                onChange={(e) => setGoalProtein(e.target.value)}
-              />
-              <input
-                aria-label="meta de água em ml"
-                type="number"
-                min="1"
-                value={goalWater}
-                onChange={(e) => setGoalWater(e.target.value)}
-              />
+            <form className="add-form goals-form" onSubmit={submitGoals}>
+              <label className="field">
+                kcal
+                <input
+                  aria-label="meta de calorias"
+                  type="number"
+                  min="1"
+                  value={goalKcal}
+                  onChange={(e) => setGoalKcal(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                proteína (g)
+                <input
+                  aria-label="meta de proteína"
+                  type="number"
+                  min="1"
+                  value={goalProtein}
+                  onChange={(e) => setGoalProtein(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                carboidrato (g)
+                <input
+                  aria-label="meta de carboidrato"
+                  type="number"
+                  min="1"
+                  value={goalCarbs}
+                  onChange={(e) => setGoalCarbs(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                gordura (g)
+                <input
+                  aria-label="meta de gordura"
+                  type="number"
+                  min="1"
+                  value={goalFat}
+                  onChange={(e) => setGoalFat(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                água (ml)
+                <input
+                  aria-label="meta de água em ml"
+                  type="number"
+                  min="1"
+                  value={goalWater}
+                  onChange={(e) => setGoalWater(e.target.value)}
+                />
+              </label>
               <button aria-label="salvar metas">
                 <Check size={16} aria-hidden />
                 Salvar metas
@@ -257,13 +301,49 @@ export default function Diario({ day }: { day: string }) {
           )}
 
           <h3>Refeições</h3>
-          <MealsTable
-            meals={report.meals}
-            foods={foods}
-            onUpdate={(id, food_id, mealGrams) => void run(() => updateMeal(id, food_id, mealGrams))}
-            onDelete={(id) => void run(() => deleteMeal(id))}
-          />
+          {report.meals.length === 0 ? (
+            <p className="empty">Nenhuma refeição registrada neste dia.</p>
+          ) : (
+            MEAL_TYPES.filter((t) => report.meals.some((m) => m.meal_type === t)).map((t) => {
+              const group = report.meals.filter((m) => m.meal_type === t)
+              const sum = (key: 'kcal' | 'protein_g' | 'carbs_g' | 'fat_g') =>
+                Math.round(group.reduce((acc, m) => acc + m[key], 0) * 10) / 10
+              return (
+                <details key={t} className="meal-group" open>
+                  <summary>
+                    <span className="meal-name">
+                      <ChevronDown size={14} className="chev" aria-hidden />
+                      {t}
+                    </span>
+                    <span className="meal-totals">
+                      {sum('kcal')} kcal · P {sum('protein_g')}g · C {sum('carbs_g')}g · G{' '}
+                      {sum('fat_g')}g
+                    </span>
+                  </summary>
+                  <MealsTable
+                    meals={group}
+                    foods={foods}
+                    onUpdate={(id, food_id, mealGrams, type) =>
+                      void run(() => updateMeal(id, food_id, mealGrams, type))
+                    }
+                    onDelete={(id) => void run(() => deleteMeal(id))}
+                  />
+                </details>
+              )
+            })
+          )}
           <form className="add-form" onSubmit={submitMeal}>
+            <select
+              aria-label="refeição do dia"
+              value={mealType}
+              onChange={(e) => setMealType(e.target.value as MealType)}
+            >
+              {MEAL_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
             <select aria-label="alimento" value={foodId} onChange={(e) => setFoodId(e.target.value)}>
               <option value="">alimento…</option>
               {foods.map((f) => (

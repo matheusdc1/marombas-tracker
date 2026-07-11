@@ -23,6 +23,18 @@ import unicodedata
 
 STOPWORDS = {"de", "do", "da", "dos", "das", "com", "em", "e", "o", "a"}
 
+# refeicao do dia: a comida herda a ultima mencao ANTES dela na mensagem
+MEAL_TYPE_RE = re.compile(r"cafe da manha|almoco|jantar|janta|lanche|ceia")
+MEAL_TYPE_NAMES = {
+    "cafe da manha": "Café da manhã",
+    "almoco": "Almoço",
+    "lanche": "Lanche",
+    "jantar": "Jantar",
+    "janta": "Jantar",
+    "ceia": "Ceia",
+}
+DEFAULT_MEAL_TYPE = "Almoço"
+
 FOOD_RE = re.compile(
     r"(\d+(?:[.,]\d+)?)\s*(kg|gr|g|ml|l)\s+de\s+([^\d,.;]+?)(?=\s+e\s+|[,.;]|$)",
     re.IGNORECASE,
@@ -122,6 +134,16 @@ def _without_spans(message: str, spans: list[tuple[int, int]]) -> str:
 
 
 def parse(message: str, foods: list[dict]) -> dict:
+    # norm() preserva os indices (acentos viram 1 char), entao as posicoes
+    # das mencoes de refeicao valem para a mensagem original
+    mentions = [
+        (m.start(), MEAL_TYPE_NAMES[m.group()]) for m in MEAL_TYPE_RE.finditer(norm(message))
+    ]
+
+    def meal_type_at(position: int) -> str:
+        before = [name for start, name in mentions if start < position]
+        return before[-1] if before else DEFAULT_MEAL_TYPE
+
     meals, unmatched, meal_spans = [], [], []
     for match in FOOD_RE.finditer(message):
         qty, unit, phrase = match.group(1), match.group(2), match.group(3).strip()
@@ -130,7 +152,13 @@ def parse(message: str, foods: list[dict]) -> dict:
         meal_spans.append(match.span())
         food = best_food(phrase, foods)
         if food:
-            meals.append({"food": food, "grams": _to_grams(qty, unit)})
+            meals.append(
+                {
+                    "food": food,
+                    "grams": _to_grams(qty, unit),
+                    "meal_type": meal_type_at(match.start()),
+                }
+            )
         else:
             unmatched.append(phrase)
 

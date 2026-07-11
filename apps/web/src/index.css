@@ -434,6 +434,69 @@ textarea {
   font-size: 0.72rem;
 }
 
+/* ---- grupos de refeição ---- */
+.meal-group {
+  margin-bottom: var(--s3);
+}
+
+.meal-group summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  list-style: none;
+  cursor: pointer;
+  padding: var(--s2) var(--s1);
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.meal-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.meal-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.meal-group .chev {
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.meal-group[open] .chev {
+  transform: rotate(180deg);
+}
+
+.meal-totals {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- form de metas ---- */
+.goals-form {
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.field input {
+  width: 110px;
+}
+
 button.ghost {
   background: transparent;
   border-style: dashed;

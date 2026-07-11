@@ -1,4 +1,4 @@
-import type { ChatResult, Food, Goals, Progress, Report } from './types'
+import type { ChatResult, Food, Goals, MealType, Progress, Report } from './types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   // em produção (Railway, front e api em serviços separados) VITE_API_URL
@@ -20,11 +20,14 @@ export const getFoods = (q: string) => req<Food[]>(`/api/foods?q=${encodeURIComp
 
 export const getReport = (day: string) => req<Report>(`/api/log/${day}`)
 
-export const addMeal = (day: string, food_id: number, grams: number) =>
-  req<{ id: number }>(`/api/log/${day}/meals`, json({ food_id, grams }))
+export const addMeal = (day: string, food_id: number, grams: number, meal_type: MealType) =>
+  req<{ id: number }>(`/api/log/${day}/meals`, json({ food_id, grams, meal_type }))
 
-export const updateMeal = (id: number, food_id: number, grams: number) =>
-  req<{ ok: boolean }>(`/api/meals/${id}`, { ...json({ food_id, grams }), method: 'PUT' })
+export const updateMeal = (id: number, food_id: number, grams: number, meal_type: MealType) =>
+  req<{ ok: boolean }>(`/api/meals/${id}`, {
+    ...json({ food_id, grams, meal_type }),
+    method: 'PUT',
+  })
 
 export const deleteMeal = (id: number) =>
   req<{ ok: boolean }>(`/api/meals/${id}`, { method: 'DELETE' })

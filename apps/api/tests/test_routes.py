@@ -96,14 +96,36 @@ def test_metas_get_e_put(client):
         "kcal": 2500.0,
         "protein_g": 150.0,
         "water_ml": 4000.0,
+        "carbs_g": 300.0,
+        "fat_g": 70.0,
     }
-    body = {"kcal": 3000, "protein_g": 180, "water_ml": 3500}
+    body = {"kcal": 3000, "protein_g": 180, "water_ml": 3500, "carbs_g": 310, "fat_g": 75}
     assert client.put("/api/goals", json=body).json() == {"ok": True}
     assert client.get("/api/goals").json() == {
         "kcal": 3000.0,
         "protein_g": 180.0,
         "water_ml": 3500.0,
+        "carbs_g": 310.0,
+        "fat_g": 75.0,
     }
+
+
+def test_refeicao_por_horario(client):
+    whey = client.get("/api/foods", params={"q": "whey"}).json()[0]
+    default = client.post(f"/api/log/{DAY}/meals", json={"food_id": whey["id"], "grams": 30})
+    assert default.status_code == 201
+    jantar = client.post(
+        f"/api/log/{DAY}/meals",
+        json={"food_id": whey["id"], "grams": 30, "meal_type": "Jantar"},
+    )
+    assert jantar.status_code == 201
+    meals = client.get(f"/api/log/{DAY}").json()["meals"]
+    assert [m["meal_type"] for m in meals] == ["Almoço", "Jantar"]
+    invalid = client.post(
+        f"/api/log/{DAY}/meals",
+        json={"food_id": whey["id"], "grams": 30, "meal_type": "Madrugada"},
+    )
+    assert invalid.status_code == 422
 
 
 def test_agua(client):

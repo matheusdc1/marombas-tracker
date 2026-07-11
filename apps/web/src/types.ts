@@ -7,9 +7,14 @@ export interface Food {
   fat_g: number
 }
 
+export const MEAL_TYPES = ['Café da manhã', 'Almoço', 'Lanche', 'Jantar', 'Ceia'] as const
+
+export type MealType = (typeof MEAL_TYPES)[number]
+
 export interface MealRow {
   id: number
   food_id: number
+  meal_type: MealType
   name: string
   grams: number
   kcal: number
@@ -22,6 +27,8 @@ export interface Goals {
   kcal: number
   protein_g: number
   water_ml: number
+  carbs_g: number
+  fat_g: number
 }
 
 export interface SetRow {

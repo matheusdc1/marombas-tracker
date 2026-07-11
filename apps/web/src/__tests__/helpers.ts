@@ -7,6 +7,7 @@ export const REPORT: Report = {
     {
       id: 1,
       food_id: 1,
+      meal_type: 'Almoço',
       name: 'frango grelhado',
       grams: 200,
       kcal: 318,
@@ -17,6 +18,7 @@ export const REPORT: Report = {
     {
       id: 2,
       food_id: 12,
+      meal_type: 'Lanche',
       name: 'whey protein',
       grams: 30,
       kcal: 120,
@@ -29,7 +31,7 @@ export const REPORT: Report = {
   totals: { kcal: 438, protein_g: 88, carbs_g: 3, fat_g: 6.8, volume_kg: 1200, water_ml: 2600 },
 }
 
-export const GOALS: Goals = { kcal: 2500, protein_g: 150, water_ml: 4000 }
+export const GOALS: Goals = { kcal: 2500, protein_g: 150, water_ml: 4000, carbs_g: 300, fat_g: 70 }
 
 export const EMPTY_REPORT: Report = {
   day: '2026-07-05',

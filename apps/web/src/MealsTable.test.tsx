@@ -32,7 +32,7 @@ describe('MealsTable', () => {
     fireEvent.change(select, { target: { value: '12' } })
     fireEvent.change(screen.getByLabelText('editar gramas'), { target: { value: '250' } })
     fireEvent.click(screen.getByLabelText('salvar frango grelhado'))
-    expect(onUpdate).toHaveBeenCalledWith(1, 12, 250)
+    expect(onUpdate).toHaveBeenCalledWith(1, 12, 250, 'Almoço')
     expect(screen.queryByLabelText('editar gramas')).toBeNull() // saiu do modo edição
   })
 

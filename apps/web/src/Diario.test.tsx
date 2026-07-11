@@ -20,11 +20,13 @@ describe('Diario', () => {
     const fn = mockFetch({ ...ROUTES, 'PUT /api/goals': { ok: true } })
     render(<Diario day="2026-07-06" />)
     await screen.findByRole('cell', { name: 'frango grelhado' })
-    expect(screen.getAllByRole('progressbar')).toHaveLength(3) // calorias, proteína e água
-    expect(screen.getByText('meta: 2500 kcal')).toBeTruthy()
+    expect(screen.getAllByRole('progressbar')).toHaveLength(5) // kcal, prot, carb, gord, água
+    expect(screen.getByText('438 / 2500 kcal')).toBeTruthy()
     fireEvent.click(await screen.findByLabelText('editar metas'))
     fireEvent.change(screen.getByLabelText('meta de calorias'), { target: { value: '3000' } })
     fireEvent.change(screen.getByLabelText('meta de proteína'), { target: { value: '180' } })
+    fireEvent.change(screen.getByLabelText('meta de carboidrato'), { target: { value: '310' } })
+    fireEvent.change(screen.getByLabelText('meta de gordura'), { target: { value: '75' } })
     fireEvent.change(screen.getByLabelText('meta de água em ml'), { target: { value: '3500' } })
     fireEvent.click(screen.getByLabelText('salvar metas'))
     await screen.findByLabelText('editar metas') // formulário fechou
@@ -34,7 +36,23 @@ describe('Diario', () => {
       kcal: 3000,
       protein_g: 180,
       water_ml: 3500,
+      carbs_g: 310,
+      fat_g: 75,
     })
+  })
+
+  it('agrupa as refeições por horário com totais por grupo', async () => {
+    mockFetch(ROUTES)
+    const { container } = render(<Diario day="2026-07-06" />)
+    await screen.findByRole('cell', { name: 'frango grelhado' })
+    const summaries = Array.from(container.querySelectorAll('.meal-group summary')).map(
+      (s) => s.textContent,
+    )
+    expect(summaries).toHaveLength(2) // grupos vazios não aparecem
+    expect(summaries[0]).toContain('Almoço')
+    expect(summaries[0]).toContain('318 kcal · P 64g · C 0g · G 5g')
+    expect(summaries[1]).toContain('Lanche')
+    expect(summaries[1]).toContain('120 kcal · P 24g · C 3g · G 1.8g')
   })
 
   it('mostra a água do dia e registra pelos botões rápidos', async () => {
@@ -100,6 +118,7 @@ describe('Diario', () => {
     expect(JSON.parse((puts[0][1] as RequestInit).body as string)).toEqual({
       food_id: 1,
       grams: 250,
+      meal_type: 'Almoço',
     })
     expect(JSON.parse((puts[1][1] as RequestInit).body as string)).toMatchObject({
       weight_kg: 65,
@@ -121,13 +140,18 @@ describe('Diario', () => {
     })
     render(<Diario day="2026-07-06" />)
     await screen.findByRole('cell', { name: 'frango grelhado' })
+    fireEvent.change(screen.getByLabelText('refeição do dia'), { target: { value: 'Jantar' } })
     fireEvent.change(screen.getByLabelText('alimento'), { target: { value: '12' } })
     fireEvent.change(screen.getByLabelText('gramas'), { target: { value: '40' } })
     fireEvent.click(screen.getByRole('button', { name: 'adicionar refeição' }))
     await screen.findByRole('cell', { name: 'frango grelhado' })
     const post = fn.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'POST')!
     expect(post[0]).toBe('/api/log/2026-07-06/meals')
-    expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ food_id: 12, grams: 40 })
+    expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({
+      food_id: 12,
+      grams: 40,
+      meal_type: 'Jantar',
+    })
   })
 
   it('adiciona série pelo formulário', async () => {

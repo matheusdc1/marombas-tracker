@@ -37,7 +37,25 @@ def test_exemplo_completo():
 def test_kg_e_virgula_decimal():
     result = parse("comi 0,5kg de batata doce", FOOD_DICTS)
     assert result["meals"] == [
-        {"food": next(f for f in FOOD_DICTS if f["name"] == "batata doce cozida"), "grams": 500.0}
+        {
+            "food": next(f for f in FOOD_DICTS if f["name"] == "batata doce cozida"),
+            "grams": 500.0,
+            "meal_type": "Almoço",
+        }
+    ]
+
+
+def test_refeicao_por_horario_na_mensagem():
+    message = (
+        "no café da manhã comi 60g de aveia e 120g de banana, "
+        "no almoço 200g de frango, e na ceia 30g de whey"
+    )
+    result = parse(message, FOOD_DICTS)
+    assert [(m["food"]["name"], m["meal_type"]) for m in result["meals"]] == [
+        ("aveia em flocos", "Café da manhã"),
+        ("banana", "Café da manhã"),
+        ("frango grelhado", "Almoço"),
+        ("whey protein", "Ceia"),
     ]
 
 

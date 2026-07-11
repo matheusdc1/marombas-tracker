@@ -39,10 +39,11 @@ describe('api', () => {
     expect(await getReport('2026-07-06')).toEqual(REPORT)
     expect(await getProgress('supino reto')).toEqual(PROGRESS)
     expect(fn).toHaveBeenLastCalledWith('/api/progress?exercise=supino%20reto', undefined)
-    expect(await addMeal('2026-07-06', 1, 150)).toEqual({ id: 1 })
+    expect(await addMeal('2026-07-06', 1, 150, 'Café da manhã')).toEqual({ id: 1 })
     expect(JSON.parse((fn.mock.lastCall![1] as RequestInit).body as string)).toEqual({
       food_id: 1,
       grams: 150,
+      meal_type: 'Café da manhã',
     })
     expect(
       await addSet('2026-07-06', { exercise: 'supino', sets: 2, reps: 10, weight_kg: 60 }),
@@ -50,13 +51,15 @@ describe('api', () => {
     expect(await sendChat('2026-07-06', 'comi 100g de arroz')).toMatchObject({ reply: 'ok' })
     expect(await deleteMeal(7)).toEqual({ ok: true })
     expect(await deleteSet(8)).toEqual({ ok: true })
-    expect(await updateMeal(7, 2, 120)).toEqual({ ok: true })
+    expect(await updateMeal(7, 2, 120, 'Jantar')).toEqual({ ok: true })
     expect((fn.mock.lastCall![1] as RequestInit).method).toBe('PUT')
     expect(await updateSet(8, { exercise: 'remada', sets: 3, reps: 8, weight_kg: 40 })).toEqual({
       ok: true,
     })
     expect(await getGoals()).toEqual(GOALS)
-    expect(await putGoals({ kcal: 3000, protein_g: 180, water_ml: 3500 })).toEqual({ ok: true })
+    expect(
+      await putGoals({ kcal: 3000, protein_g: 180, water_ml: 3500, carbs_g: 310, fat_g: 75 }),
+    ).toEqual({ ok: true })
     expect(await addWater('2026-07-06', 250)).toEqual({ id: 3 })
     expect(JSON.parse((fn.mock.lastCall![1] as RequestInit).body as string)).toEqual({ ml: 250 })
   })
