@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from app import llm
 from tests.test_parser import EXAMPLE
 
 DAY = "2026-07-06"
@@ -153,6 +154,27 @@ def test_chat_alimento_desconhecido(client):
 
 def test_chat_dia_invalido(client):
     assert client.post("/api/chat", json={"message": "oi", "day": "hoje"}).status_code == 400
+
+
+def test_chat_usa_o_llm_quando_ha_chave(client, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "chave")
+    sentinel = {"reply": "ok do llm", "meals_logged": 2, "sets_logged": 1, "unmatched": []}
+    monkeypatch.setattr(llm, "chat", lambda db, day, message: sentinel)
+    assert client.post("/api/chat", json={"message": "x", "day": DAY}).json() == sentinel
+
+
+def test_chat_degrada_para_o_mock_quando_o_llm_falha(client, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "chave")
+
+    def boom(db, day, message):
+        raise RuntimeError("cota estourada")
+
+    monkeypatch.setattr(llm, "chat", boom)
+    data = client.post(
+        "/api/chat", json={"message": "fiz supino 3x10 100kg", "day": DAY}
+    ).json()
+    assert data["reply"].startswith("[LLM indisponível")
+    assert data["sets_logged"] == 1  # o mock assumiu e registrou
 
 
 def test_metas_get_e_put(client):

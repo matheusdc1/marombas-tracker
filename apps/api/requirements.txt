@@ -2,5 +2,6 @@ fastapi
 uvicorn[standard]
 httpx
 python-multipart
+google-genai
 pytest
 pytest-cov

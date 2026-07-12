@@ -112,6 +112,25 @@ def _ensure_column(conn: sqlite3.Connection, table: str, ddl: str) -> None:
         pass  # coluna ja existe
 
 
+def record_pr(
+    conn: sqlite3.Connection, set_id: int, day: str, exercise: str, weight: float
+) -> bool:
+    """PR = carga acima de qualquer registro anterior do exercicio."""
+    if weight <= 0:
+        return False
+    previous = conn.execute(
+        "SELECT MAX(weight_kg) FROM workout_sets WHERE exercise = ? AND id != ?",
+        (exercise, set_id),
+    ).fetchone()[0]
+    if previous is not None and weight <= previous:
+        return False
+    conn.execute(
+        "INSERT INTO prs (set_id, exercise, weight_kg, day) VALUES (?, ?, ?, ?)",
+        (set_id, exercise, weight, day),
+    )
+    return True
+
+
 def get_db():
     conn = connect()
     try:

@@ -5,8 +5,8 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from . import parser
-from .db import get_db
+from . import llm, parser
+from .db import get_db, record_pr
 
 router = APIRouter(prefix="/api")
 
@@ -166,23 +166,6 @@ def delete_meal(meal_id: int, db: sqlite3.Connection = Depends(get_db)):
     return {"ok": True}
 
 
-def _record_pr(db: sqlite3.Connection, set_id: int, day: str, exercise: str, weight: float) -> bool:
-    """PR = carga acima de qualquer registro anterior do exercicio."""
-    if weight <= 0:
-        return False
-    previous = db.execute(
-        "SELECT MAX(weight_kg) FROM workout_sets WHERE exercise = ? AND id != ?",
-        (exercise, set_id),
-    ).fetchone()[0]
-    if previous is not None and weight <= previous:
-        return False
-    db.execute(
-        "INSERT INTO prs (set_id, exercise, weight_kg, day) VALUES (?, ?, ?, ?)",
-        (set_id, exercise, weight, day),
-    )
-    return True
-
-
 @router.post("/log/{day}/sets", status_code=201)
 def add_set(day: str, body: SetIn, db: sqlite3.Connection = Depends(get_db)):
     valid_day(day)
@@ -192,7 +175,7 @@ def add_set(day: str, body: SetIn, db: sqlite3.Connection = Depends(get_db)):
         " VALUES (?, ?, ?, ?, ?, ?)",
         (day, exercise, body.sets, body.reps, body.weight_kg, body.rest_s),
     )
-    is_pr = _record_pr(db, cur.lastrowid, day, exercise, body.weight_kg)
+    is_pr = record_pr(db, cur.lastrowid, day, exercise, body.weight_kg)
     return {"id": cur.lastrowid, "is_pr": is_pr}
 
 
@@ -256,17 +239,31 @@ def add_water(day: str, body: WaterIn, db: sqlite3.Connection = Depends(get_db))
 
 @router.post("/chat")
 def chat(body: ChatIn, db: sqlite3.Connection = Depends(get_db)):
-    """Mock do LLM: interpreta a mensagem, registra no diario e responde um resumo."""
+    """Chat do diario: LLM real (Gemini) quando ha GEMINI_API_KEY; senao, parser mock."""
     valid_day(body.day)
+    if llm.available():
+        try:
+            return llm.chat(db, body.day, body.message)
+        except Exception:
+            # LLM fora (rede, cota): descarta escritas parciais e degrada para o mock
+            db.rollback()
+            out = _chat_mock(db, body.day, body.message)
+            out["reply"] = "[LLM indisponível — usando modo offline]\n" + out["reply"]
+            return out
+    return _chat_mock(db, body.day, body.message)
+
+
+def _chat_mock(db: sqlite3.Connection, day: str, message: str) -> dict:
+    """Fallback offline: o parser regex interpreta, registra e responde um resumo."""
     foods = [dict(r) for r in db.execute("SELECT * FROM foods")]
-    parsed = parser.parse(body.message, foods)
+    parsed = parser.parse(message, foods)
 
     meal_lines, total_kcal = [], 0.0
     for meal in parsed["meals"]:
         food, grams = meal["food"], meal["grams"]
         db.execute(
             "INSERT INTO meals (day, food_id, grams, meal_type) VALUES (?, ?, ?, ?)",
-            (body.day, food["id"], grams, meal["meal_type"]),
+            (day, food["id"], grams, meal["meal_type"]),
         )
         kcal = food["kcal"] * grams / 100
         total_kcal += kcal
@@ -281,9 +278,9 @@ def chat(body: ChatIn, db: sqlite3.Connection = Depends(get_db)):
     for item in parsed["sets"]:
         cur = db.execute(
             "INSERT INTO workout_sets (day, exercise, sets, reps, weight_kg) VALUES (?, ?, ?, ?, ?)",
-            (body.day, item["exercise"], item["sets"], item["reps"], item["weight_kg"]),
+            (day, item["exercise"], item["sets"], item["reps"], item["weight_kg"]),
         )
-        is_pr = _record_pr(db, cur.lastrowid, body.day, item["exercise"], item["weight_kg"])
+        is_pr = record_pr(db, cur.lastrowid, day, item["exercise"], item["weight_kg"])
         volume = item["sets"] * item["reps"] * item["weight_kg"]
         total_volume += volume
         load = f"{item['weight_kg']:g}kg" if item["weight_kg"] else "peso corporal"
@@ -293,7 +290,7 @@ def chat(body: ChatIn, db: sqlite3.Connection = Depends(get_db)):
             f" (volume {volume:g}kg){pr_note}"
         )
 
-    parts = [f"Registrado em {body.day}:"]
+    parts = [f"Registrado em {day}:"]
     if meal_lines:
         parts.append(f"\nRefeições (≈ {total_kcal:.0f} kcal):\n" + "\n".join(meal_lines))
     if set_lines:
