@@ -1,3 +1,4 @@
+import logging
 import sqlite3
 from datetime import date
 from typing import Literal
@@ -246,6 +247,7 @@ def chat(body: ChatIn, db: sqlite3.Connection = Depends(get_db)):
             return llm.chat(db, body.day, body.message)
         except Exception:
             # LLM fora (rede, cota): descarta escritas parciais e degrada para o mock
+            logging.exception("chamada ao LLM falhou; degradando para o parser mock")
             db.rollback()
             out = _chat_mock(db, body.day, body.message)
             out["reply"] = "[LLM indisponível — usando modo offline]\n" + out["reply"]

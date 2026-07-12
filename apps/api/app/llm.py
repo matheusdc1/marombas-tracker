@@ -16,7 +16,9 @@ from google.genai import types
 from .db import record_pr
 
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "system_prompt.txt"
-DEFAULT_MODEL = "gemini-2.5-flash"
+# pinado (nao "-latest"): comportamento reprodutivel; 2.5-flash foi recusado
+# para contas novas (404 "no longer available to new users") em 12/07/2026
+DEFAULT_MODEL = "gemini-3.5-flash"
 # temperatura 0: extração de dados não é tarefa criativa — queremos a mesma
 # mensagem virando sempre o mesmo registro (experimentos em docs/experimentos.md)
 TEMPERATURE = 0.0
