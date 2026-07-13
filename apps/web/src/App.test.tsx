@@ -21,14 +21,14 @@ describe('App', () => {
     mockFetch({})
     render(<App />)
     expect(screen.getByText('Seu diário inteligente de treino e alimentação.')).toBeTruthy()
-    expect(screen.queryByText(/resposta simulada/i)).toBeNull() // app ainda não abriu
+    expect(screen.queryByText(/gerada por ia/i)).toBeNull() // app ainda não abriu
     fireEvent.click(screen.getByRole('button', { name: /vamos começar/i }))
-    expect(screen.getByText(/resposta simulada/i)).toBeTruthy() // caiu no Chat
+    expect(screen.getByText(/gerada por ia/i)).toBeTruthy() // caiu no Chat
   })
 
   it('abre no chat e navega entre as abas', async () => {
     setup()
-    expect(screen.getByText(/resposta simulada/i)).toBeTruthy()
+    expect(screen.getByText(/gerada por ia/i)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Diário' }))
     expect(await screen.findByText('Refeições')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Evolução' }))
@@ -39,7 +39,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Fotos de evolução' })).toBeTruthy()
     expect(screen.queryByLabelText('dia')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Chat' }))
-    expect(screen.getByText(/resposta simulada/i)).toBeTruthy()
+    expect(screen.getByText(/gerada por ia/i)).toBeTruthy()
   })
 
   it('navega entre dias com as setas e o input de data', () => {

@@ -151,6 +151,25 @@ def test_chat_openrouter_roda_o_loop_de_tools(conn, monkeypatch):
     assert "erro" in json.loads(devolvidos[1]["content"])  # tool desconhecida
 
 
+def test_resposta_vazia_com_registro_vira_resumo_das_tools(conn, monkeypatch):
+    # visto no hy3 em uso real: registra via tools e devolve content vazio
+    fake = _FakeHttp(
+        [
+            {
+                "choices": [
+                    {"message": {"role": "assistant",
+                                 "tool_calls": [_tool_call("c", "registrar_agua", {"ml": 500})]}}
+                ]
+            },
+            {"choices": [{"message": {"role": "assistant", "content": ""}}]},
+        ]
+    )
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-chave")
+    monkeypatch.setattr(llm.httpx, "post", fake.post)
+    out = llm.chat(conn, DAY, "bebi 500ml de agua")
+    assert out["reply"] == "Registrado:\n- água: 500ml"
+
+
 def test_chat_openrouter_estoura_o_prazo_total(conn, monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "or-chave")
     monkeypatch.setattr(llm, "DEADLINE_S", 0)  # prazo ja vencido: nem chama a API

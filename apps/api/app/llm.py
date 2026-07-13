@@ -22,9 +22,10 @@ from google.genai import types
 from .db import record_pr
 
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "system_prompt.txt"
-# Hy3 gratuito no OpenRouter — anunciado como disponível só até 21/07/2026;
-# quando sair do ar, trocar via env OPENROUTER_MODEL (nada de código)
-DEFAULT_OPENROUTER_MODEL = "tencent/hy3:free"
+# deepseek-v4-flash: ~US$0.001/mensagem, tool calling estável. O hy3:free que o
+# antecedeu devolvia resposta vazia após registrar (uso real, 13/07/2026) e tinha
+# fim anunciado para 21/07/2026. Trocar via env OPENROUTER_MODEL (nada de código).
+DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4-flash"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 # pinado (nao "-latest"): comportamento reprodutível; 2.5-flash foi recusado
 # para contas novas (404) e o 3.5-flash dá só 20 req/dia no free tier
@@ -51,12 +52,17 @@ def system_prompt() -> str:
     return PROMPT_PATH.read_text(encoding="utf-8")
 
 
-def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list:
+def make_tools(
+    db: sqlite3.Connection, day: str, counts: dict[str, int], log: list[str] | None = None
+) -> list:
     """Tools expostas ao modelo, como closures sobre a conexão e o dia do diário.
 
     As docstrings e limites de sanidade são lidos PELO MODELO (viram a declaração
     da tool nos dois provedores) — descrição clara aqui é engenharia de prompt.
+    Cada registro bem-sucedido também entra em `log`: se o modelo devolver resposta
+    vazia depois de escrever, o resumo vem do log — nunca escrita silenciosa.
     """
+    log = [] if log is None else log
 
     def buscar_alimento(termo: str) -> list[dict]:
         """Busca alimentos na tabela TACO por nome (busca parcial, em minúsculas).
@@ -91,6 +97,10 @@ def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list
             (day, food_id, gramas, tipo_refeicao),
         )
         counts["meals"] += 1
+        log.append(
+            f"{tipo_refeicao}: {food['name']}, {gramas:g}g"
+            f" ({food['kcal'] * gramas / 100:.0f} kcal)"
+        )
         return {
             "ok": True,
             "alimento": food["name"],
@@ -122,6 +132,10 @@ def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list
         )
         is_pr = record_pr(db, cur.lastrowid, day, nome, carga_kg)
         counts["sets"] += 1
+        log.append(
+            f"{nome}: {series}x{repeticoes} @ {carga_kg:g}kg"
+            + (" — NOVO PR!" if is_pr else "")
+        )
         return {"ok": True, "volume_kg": series * repeticoes * carga_kg, "novo_pr": is_pr}
 
     def registrar_agua(ml: float) -> dict:
@@ -129,6 +143,7 @@ def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list
         if not 0 < ml <= 10000:
             return {"erro": "ml implausível: use um valor entre 1 e 10000"}
         db.execute("INSERT INTO water (day, ml) VALUES (?, ?)", (day, ml))
+        log.append(f"água: {ml:g}ml")
         return {"ok": True, "ml": ml}
 
     def registrar_peso_corporal(kg: float) -> dict:
@@ -136,6 +151,7 @@ def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list
         if not 20 <= kg <= 400:
             return {"erro": "kg implausível para peso corporal: use entre 20 e 400"}
         db.execute("INSERT INTO body_weight (day, kg) VALUES (?, ?)", (day, kg))
+        log.append(f"peso corporal: {kg:g}kg")
         return {"ok": True, "kg": kg}
 
     def registrar_duracao_treino(minutos: int) -> dict:
@@ -147,6 +163,7 @@ def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list
             " ON CONFLICT(day) DO UPDATE SET duration_min = excluded.duration_min",
             (day, minutos),
         )
+        log.append(f"duração do treino: {minutos}min")
         return {"ok": True, "minutos": minutos}
 
     return [
@@ -279,13 +296,19 @@ def _chat_gemini(tools: list, day: str, message: str) -> str:
 def chat(db: sqlite3.Connection, day: str, message: str) -> dict:
     """Envia a mensagem ao LLM com as tools; o modelo registra e resume."""
     counts = {"meals": 0, "sets": 0}
-    tools = make_tools(db, day, counts)
+    log: list[str] = []
+    tools = make_tools(db, day, counts, log)
     if os.environ.get("OPENROUTER_API_KEY"):
         reply = _chat_openrouter(tools, day, message)
     else:
         reply = _chat_gemini(tools, day, message)
+    if not reply:
+        # modelo registrou mas devolveu texto vazio (visto no hy3 em uso real):
+        # o resumo deterministico das tools assume — nunca escrita silenciosa
+        reply = "Registrado:\n- " + "\n- ".join(log) if log else \
+            "Não consegui interpretar a mensagem."
     return {
-        "reply": reply or "Não consegui interpretar a mensagem.",
+        "reply": reply,
         "meals_logged": counts["meals"],
         "sets_logged": counts["sets"],
         "unmatched": [],
