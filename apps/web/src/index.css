@@ -342,6 +342,17 @@ textarea {
   border-bottom-left-radius: var(--s1);
 }
 
+.msg.pending {
+  color: var(--muted);
+  animation: msg-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes msg-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
 .chat form {
   display: flex;
   gap: var(--s2);

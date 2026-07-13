@@ -38,8 +38,10 @@ describe('Chat', () => {
     send('teste')
     fireEvent.change(screen.getByLabelText('mensagem'), { target: { value: 'outra' } })
     expect((screen.getByRole('button', { name: 'Enviar' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByText(/registrando no diário…/i)).toBeTruthy() // indicador de espera
     resolve(new Response(JSON.stringify(REPLY), { status: 200 }))
     expect(await screen.findByText(/registrado em/i)).toBeTruthy()
+    expect(screen.queryByText(/registrando no diário…/i)).toBeNull() // indicador some
   })
 
   it('mostra erro amigável quando a API está fora', async () => {

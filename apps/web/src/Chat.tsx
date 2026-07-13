@@ -53,6 +53,11 @@ export default function Chat({ day }: { day: string }) {
             {m.text}
           </pre>
         ))}
+        {busy && (
+          <pre className="msg bot pending" aria-live="polite">
+            Registrando no diário…
+          </pre>
+        )}
       </div>
       <form onSubmit={submit}>
         <textarea
