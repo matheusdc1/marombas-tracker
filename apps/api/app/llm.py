@@ -1,33 +1,43 @@
-"""Camada de LLM real (Gemini) do chat.
+"""Camada de LLM real do chat (OpenRouter ou Gemini).
 
 Mesmo papel do parser mock, mas invertido: em vez de devolver estruturas para o
 endpoint inserir, o modelo registra ELE MESMO via tools — cada tool valida e grava
 no banco, e o modelo nunca inventa valor nutricional (a regra o obriga a passar por
-buscar_alimento/TACO). Sem GEMINI_API_KEY, o endpoint continua no parser mock.
+buscar_alimento/TACO). Provedores, por ordem de preferência da chave presente:
+OPENROUTER_API_KEY (modelos abertos via API OpenAI-compatível, loop de tools manual)
+ou GEMINI_API_KEY (SDK google-genai, loop automático). Sem chave, o endpoint fica
+no parser mock.
 """
 
+import json
 import os
 import sqlite3
 from pathlib import Path
 
+import httpx
 from google import genai
 from google.genai import types
 
 from .db import record_pr
 
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "system_prompt.txt"
-# pinado (nao "-latest"): comportamento reprodutivel; 2.5-flash foi recusado
-# para contas novas (404 "no longer available to new users") em 12/07/2026
-DEFAULT_MODEL = "gemini-3.5-flash"
+# Hy3 gratuito no OpenRouter — anunciado como disponível só até 21/07/2026;
+# quando sair do ar, trocar via env OPENROUTER_MODEL (nada de código)
+DEFAULT_OPENROUTER_MODEL = "tencent/hy3:free"
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+# pinado (nao "-latest"): comportamento reprodutível; 2.5-flash foi recusado
+# para contas novas (404) e o 3.5-flash dá só 20 req/dia no free tier
+DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
 # temperatura 0: extração de dados não é tarefa criativa — queremos a mesma
 # mensagem virando sempre o mesmo registro (experimentos em docs/experimentos.md)
 TEMPERATURE = 0.0
+MAX_TOOL_ROUNDS = 8
 
 MEAL_TYPES = ("Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia")
 
 
 def available() -> bool:
-    return bool(os.environ.get("GEMINI_API_KEY"))
+    return bool(os.environ.get("OPENROUTER_API_KEY") or os.environ.get("GEMINI_API_KEY"))
 
 
 def system_prompt() -> str:
@@ -37,8 +47,8 @@ def system_prompt() -> str:
 def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list:
     """Tools expostas ao modelo, como closures sobre a conexão e o dia do diário.
 
-    O SDK deriva a declaração de cada tool da assinatura tipada + docstring:
-    as docstrings abaixo são lidas PELO MODELO — são engenharia de prompt.
+    As docstrings e limites de sanidade são lidos PELO MODELO (viram a declaração
+    da tool nos dois provedores) — descrição clara aqui é engenharia de prompt.
     """
 
     def buscar_alimento(termo: str) -> list[dict]:
@@ -57,15 +67,15 @@ def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list
     def registrar_refeicao(food_id: int, gramas: float, tipo_refeicao: str) -> dict:
         """Registra uma refeição no diário do dia.
 
-        food_id: id devolvido por buscar_alimento. gramas: quantidade em gramas
-        (líquidos em ml contam 1:1). tipo_refeicao: exatamente um de
+        food_id: id devolvido por buscar_alimento. gramas: quantidade em gramas,
+        entre 1 e 3000 (líquidos em ml contam 1:1). tipo_refeicao: exatamente um de
         "Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia".
         Devolve as kcal e macros calculados, para citar na resposta.
         """
         if tipo_refeicao not in MEAL_TYPES:
             return {"erro": f"tipo_refeicao inválido; use um de {list(MEAL_TYPES)}"}
-        if gramas <= 0:
-            return {"erro": "gramas deve ser maior que zero"}
+        if not 0 < gramas <= 3000:
+            return {"erro": "gramas implausível: use um valor entre 1 e 3000"}
         food = db.execute("SELECT * FROM foods WHERE id = ?", (food_id,)).fetchone()
         if not food:
             return {"erro": "food_id não existe; use buscar_alimento antes"}
@@ -88,13 +98,15 @@ def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list
     ) -> dict:
         """Registra séries de um exercício no treino do dia.
 
-        carga_kg é a carga TOTAL (some os dois lados quando o usuário disser
-        "de cada lado"); 0 para exercício com peso corporal. descanso_s: segundos
-        de descanso entre séries, 0 quando não informado. Devolve o volume e
-        novo_pr=true quando a carga supera todo o histórico do exercício.
+        carga_kg é a carga TOTAL, até 500 (some os dois lados quando o usuário
+        disser "de cada lado"); 0 para exercício com peso corporal. descanso_s:
+        segundos de descanso entre séries, 0 quando não informado. Devolve o volume
+        e novo_pr=true quando a carga supera todo o histórico do exercício.
         """
-        if series <= 0 or repeticoes <= 0 or carga_kg < 0 or descanso_s < 0:
-            return {"erro": "series/repeticoes devem ser > 0; carga e descanso, >= 0"}
+        if not 0 < series <= 50 or not 0 < repeticoes <= 200:
+            return {"erro": "series (1-50) e repeticoes (1-200) fora da faixa"}
+        if not 0 <= carga_kg <= 500 or not 0 <= descanso_s <= 3600:
+            return {"erro": "carga_kg (0-500) ou descanso_s (0-3600) implausível"}
         nome = exercicio.strip().lower()
         cur = db.execute(
             "INSERT INTO workout_sets (day, exercise, sets, reps, weight_kg, rest_s)"
@@ -106,23 +118,23 @@ def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list
         return {"ok": True, "volume_kg": series * repeticoes * carga_kg, "novo_pr": is_pr}
 
     def registrar_agua(ml: float) -> dict:
-        """Registra consumo de água do dia, em ml (converta litros: 1,5l = 1500)."""
-        if ml <= 0:
-            return {"erro": "ml deve ser maior que zero"}
+        """Registra consumo de água do dia, em ml, até 10000 (1,5l = 1500)."""
+        if not 0 < ml <= 10000:
+            return {"erro": "ml implausível: use um valor entre 1 e 10000"}
         db.execute("INSERT INTO water (day, ml) VALUES (?, ?)", (day, ml))
         return {"ok": True, "ml": ml}
 
     def registrar_peso_corporal(kg: float) -> dict:
-        """Registra o peso corporal do usuário no dia, em kg."""
-        if kg <= 0:
-            return {"erro": "kg deve ser maior que zero"}
+        """Registra o peso corporal do usuário no dia, em kg (entre 20 e 400)."""
+        if not 20 <= kg <= 400:
+            return {"erro": "kg implausível para peso corporal: use entre 20 e 400"}
         db.execute("INSERT INTO body_weight (day, kg) VALUES (?, ?)", (day, kg))
         return {"ok": True, "kg": kg}
 
     def registrar_duracao_treino(minutos: int) -> dict:
-        """Registra a duração total do treino do dia, em minutos (1h10 = 70)."""
-        if minutos <= 0:
-            return {"erro": "minutos deve ser maior que zero"}
+        """Registra a duração total do treino do dia, em minutos, até 600 (1h10 = 70)."""
+        if not 0 < minutos <= 600:
+            return {"erro": "minutos implausível: use um valor entre 1 e 600"}
         db.execute(
             "INSERT INTO workout_meta (day, duration_min) VALUES (?, ?)"
             " ON CONFLICT(day) DO UPDATE SET duration_min = excluded.duration_min",
@@ -140,21 +152,126 @@ def make_tools(db: sqlite3.Connection, day: str, counts: dict[str, int]) -> list
     ]
 
 
-def chat(db: sqlite3.Connection, day: str, message: str) -> dict:
-    """Envia a mensagem ao Gemini com as tools; o modelo registra e resume."""
-    counts = {"meals": 0, "sets": 0}
+# parâmetros tipados das tools no formato OpenAI (OpenRouter); as descrições em
+# prosa vêm das docstrings acima, para não manter dois textos
+_NUM = {"type": "number"}
+_INT = {"type": "integer"}
+PARAM_SCHEMAS = {
+    "buscar_alimento": {
+        "type": "object",
+        "properties": {"termo": {"type": "string", "description": "nome (ou parte) do alimento"}},
+        "required": ["termo"],
+    },
+    "registrar_refeicao": {
+        "type": "object",
+        "properties": {
+            "food_id": _INT,
+            "gramas": _NUM,
+            "tipo_refeicao": {"type": "string", "enum": list(MEAL_TYPES)},
+        },
+        "required": ["food_id", "gramas", "tipo_refeicao"],
+    },
+    "registrar_serie": {
+        "type": "object",
+        "properties": {
+            "exercicio": {"type": "string"},
+            "series": _INT,
+            "repeticoes": _INT,
+            "carga_kg": _NUM,
+            "descanso_s": _INT,
+        },
+        "required": ["exercicio", "series", "repeticoes", "carga_kg", "descanso_s"],
+    },
+    "registrar_agua": {"type": "object", "properties": {"ml": _NUM}, "required": ["ml"]},
+    "registrar_peso_corporal": {"type": "object", "properties": {"kg": _NUM}, "required": ["kg"]},
+    "registrar_duracao_treino": {
+        "type": "object",
+        "properties": {"minutos": _INT},
+        "required": ["minutos"],
+    },
+}
+
+
+def tools_spec(tools: list) -> list[dict]:
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": t.__name__,
+                "description": t.__doc__,
+                "parameters": PARAM_SCHEMAS[t.__name__],
+            },
+        }
+        for t in tools
+    ]
+
+
+def _chat_openrouter(tools: list, day: str, message: str) -> str:
+    """Loop manual de tool calling na API OpenAI-compatível do OpenRouter."""
+    by_name = {t.__name__: t for t in tools}
+    messages = [
+        {"role": "system", "content": system_prompt()},
+        {"role": "user", "content": f"Dia do diário: {day}\nMensagem: {message}"},
+    ]
+    for _ in range(MAX_TOOL_ROUNDS):
+        resp = httpx.post(
+            OPENROUTER_URL,
+            headers={"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"},
+            json={
+                "model": os.environ.get("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL),
+                "messages": messages,
+                "tools": tools_spec(tools),
+                "temperature": TEMPERATURE,
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        msg = resp.json()["choices"][0]["message"]
+        calls = msg.get("tool_calls")
+        if not calls:
+            return msg.get("content") or ""
+        messages.append(msg)
+        for call in calls:
+            fn = by_name.get(call["function"]["name"])
+            try:
+                result = fn(**json.loads(call["function"]["arguments"] or "{}"))
+            except (TypeError, ValueError) as exc:  # tool ou argumentos inválidos
+                result = {"erro": f"chamada inválida: {exc}"}
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call["id"],
+                    "content": json.dumps(result, ensure_ascii=False),
+                }
+            )
+    return "Não consegui concluir o registro: excesso de chamadas de ferramenta."
+
+
+def _chat_gemini(tools: list, day: str, message: str) -> str:
+    """Gemini via SDK oficial: o loop de tools é automático (funções Python)."""
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     response = client.models.generate_content(
-        model=os.environ.get("GEMINI_MODEL", DEFAULT_MODEL),
+        model=os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
         contents=f"Dia do diário: {day}\nMensagem: {message}",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt(),
             temperature=TEMPERATURE,
-            tools=make_tools(db, day, counts),
+            tools=tools,
         ),
     )
+    return response.text or ""
+
+
+def chat(db: sqlite3.Connection, day: str, message: str) -> dict:
+    """Envia a mensagem ao LLM com as tools; o modelo registra e resume."""
+    counts = {"meals": 0, "sets": 0}
+    tools = make_tools(db, day, counts)
+    if os.environ.get("OPENROUTER_API_KEY"):
+        reply = _chat_openrouter(tools, day, message)
+    else:
+        reply = _chat_gemini(tools, day, message)
     return {
-        "reply": response.text or "Não consegui interpretar a mensagem.",
+        "reply": reply or "Não consegui interpretar a mensagem.",
         "meals_logged": counts["meals"],
         "sets_logged": counts["sets"],
         "unmatched": [],
