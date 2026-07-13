@@ -12,6 +12,7 @@ no parser mock.
 import json
 import os
 import sqlite3
+import time
 from pathlib import Path
 
 import httpx
@@ -32,6 +33,12 @@ DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
 # mensagem virando sempre o mesmo registro (experimentos em docs/experimentos.md)
 TEMPERATURE = 0.0
 MAX_TOOL_ROUNDS = 8
+# teto de tempo da conversa inteira com o provedor: a transacao do request segura
+# o lock de escrita do sqlite — um loop lento a mais nao pode travar a API toda
+DEADLINE_S = 120
+# resposta e curta (lista de registros); o teto barra geracao interminavel em
+# temperatura alta — o timeout de leitura do httpx e por chunk, nao total
+MAX_TOKENS = 700
 
 MEAL_TYPES = ("Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia")
 
@@ -213,7 +220,13 @@ def _chat_openrouter(tools: list, day: str, message: str) -> str:
         {"role": "system", "content": system_prompt()},
         {"role": "user", "content": f"Dia do diário: {day}\nMensagem: {message}"},
     ]
+    deadline = time.monotonic() + DEADLINE_S
     for _ in range(MAX_TOOL_ROUNDS):
+        restante = deadline - time.monotonic()
+        if restante <= 0:
+            # estourar aqui derruba para o mock (rollback incluso) em vez de
+            # devolver um registro pela metade
+            raise TimeoutError("LLM excedeu o tempo limite da conversa")
         resp = httpx.post(
             OPENROUTER_URL,
             headers={"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"},
@@ -222,8 +235,9 @@ def _chat_openrouter(tools: list, day: str, message: str) -> str:
                 "messages": messages,
                 "tools": tools_spec(tools),
                 "temperature": TEMPERATURE,
+                "max_tokens": MAX_TOKENS,
             },
-            timeout=120,
+            timeout=min(60, restante),
         )
         resp.raise_for_status()
         msg = resp.json()["choices"][0]["message"]

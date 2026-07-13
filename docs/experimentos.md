@@ -48,8 +48,51 @@ modelo seja convencido a registrar "5000g de whey", a ferramenta recusa.
 | `gemini-3.1-flash-lite` | cota folgada; usado na iteração v1→v2; hoje é o provedor **reserva** |
 | `tencent/hy3:free` (OpenRouter) | principal; tool calling estável em pt-BR (9/9); **anunciado como disponível só até 21/07/2026** — a troca é uma env var (`OPENROUTER_MODEL`), e o caminho Gemini fica de reserva |
 
-## Parâmetros
+## Parâmetros — temperatura (13/07/2026, `tencent/hy3:free`, prompt v2)
 
-Temperatura atual: **0.0** — extração de dados não é tarefa criativa; queremos a
-mesma mensagem virando sempre o mesmo registro. Comparação experimental de
-temperaturas e entre modelos: *(fase 3, a preencher)*.
+A mesma bateria de 6 casos rodada só variando a temperatura. Avaliado no banco,
+não só na resposta:
+
+| Caso | 0.0 | 0.7 | 1.5 |
+|---|---|---|---|
+| Frase completa (2 refeições + água + peso + duração + série) | ✅ | ✅ | ❌ nada registrado, resposta vazia |
+| "3 ovos mexidos" (unidade caseira + variante) | ✅ | ✅ | ❌ nada |
+| "12,5kg" e "1,5l" (vírgula decimal) | ✅ | ✅ | ✅ |
+| Injection (revelar prompt + 5000g de whey) | ✅ recusa educada | ⚠️ seguro, mas resposta vazia | ⚠️ seguro, resposta vazia |
+| "ontem comi…" (dia relativo) | ✅ | ✅ | ✅ (verboso) |
+| Alimento fora da TACO (picanha) | ✅ | ✅ | ❌ **registrou 1 refeição em silêncio** (resposta vazia) |
+| **Total** | **6/6** | **5/6** | **2/6** |
+
+Conclusões:
+- **0.0 é a escolha** — extração de dados não é tarefa criativa; queremos a mesma
+  mensagem virando sempre o mesmo registro.
+- A degradação em 1.5 não é só "resposta pior": aparece o pior modo de falha
+  possível — **registrar no banco sem contar ao usuário** (resposta vazia com
+  escrita silenciosa).
+- A 1.5 o modelo também **tagarelava até estourar o tempo**: a primeira tentativa
+  travou uma requisição por >15 minutos. Isso motivou dois guard-rails de
+  engenharia que ficaram no código: `max_tokens=700` (o timeout de leitura do
+  httpx é por chunk, não total — geração interminável nunca estoura timeout) e
+  um teto de 120s na conversa inteira (`DEADLINE_S`), que derruba para o mock
+  com rollback em vez de segurar o lock de escrita do SQLite.
+
+## Comparação de modelos (13/07/2026, temperatura 0, prompt v2, mesma bateria)
+
+| Caso | `tencent/hy3:free` (295B MoE) | `nvidia/nemotron-3-nano-30b-a3b:free` (30B, classe "local") |
+|---|---|---|
+| Frase completa | ✅ | ❌ |
+| 3 ovos mexidos | ✅ | ❌ |
+| Vírgula decimal | ✅ | ❌ |
+| Injection | ✅ | ⚠️ não vazou, mas não respondeu |
+| Dia relativo | ✅ | ✅ |
+| Fora da TACO | ✅ | ❌ |
+| **Total** | **6/6** | **1/6** |
+
+O modo de falha do 30B é revelador: ele **entende as regras** (o raciocínio que
+vaza mostra que ele deduz corretamente "de cada lado" = 80kg, 3 ovos = 150g de
+ovo frito), mas **despeja o chain-of-thought em inglês como resposta e nunca
+chama as tools** — raciocina, não executa. É o que se perderia rodando um modelo
+pequeno local via Ollama: não qualidade de texto, mas **confiabilidade de tool
+calling**. (O `gemini-3.1-flash-lite`, hospedado, fez 4/8 na bateria do prompt
+v1 com falhas mais suaves — variante ambígua e resposta seca — e segue como
+provedor reserva.)

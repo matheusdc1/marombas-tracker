@@ -142,12 +142,20 @@ def test_chat_openrouter_roda_o_loop_de_tools(conn, monkeypatch):
     assert primeira["headers"]["Authorization"] == "Bearer or-chave"
     assert primeira["json"]["model"] == llm.DEFAULT_OPENROUTER_MODEL
     assert primeira["json"]["temperature"] == 0.0
+    assert primeira["json"]["max_tokens"] == llm.MAX_TOKENS
     assert "<regras>" in primeira["json"]["messages"][0]["content"]
     assert "comi 100g de arroz" in primeira["json"]["messages"][1]["content"]
     # a segunda requisição leva os resultados das tools de volta ao modelo
     devolvidos = [m for m in fake.requests[1]["json"]["messages"] if m.get("role") == "tool"]
     assert json.loads(devolvidos[0]["content"])["ok"] is True
     assert "erro" in json.loads(devolvidos[1]["content"])  # tool desconhecida
+
+
+def test_chat_openrouter_estoura_o_prazo_total(conn, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-chave")
+    monkeypatch.setattr(llm, "DEADLINE_S", 0)  # prazo ja vencido: nem chama a API
+    with pytest.raises(TimeoutError):
+        llm.chat(conn, DAY, "oi")
 
 
 def test_chat_openrouter_para_no_teto_de_chamadas(conn, monkeypatch):
