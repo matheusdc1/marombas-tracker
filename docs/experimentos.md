@@ -39,6 +39,24 @@ modelo seja convencido a registrar "5000g de whey", a ferramenta recusa.
 | "ontem comi…" | ✅ não registrou e indicou trocar o seletor para 2026-01-14 |
 | Alimento fora da TACO (picanha) | ✅ arroz registrado; "Não reconheci: picanha" |
 
+### v2 → v3 (13/07/2026, motivado por USO REAL em produção)
+
+O usuário real encontrou o que a bateria não cobria:
+
+| Falha em produção (hy3:free) | Correção na v3 |
+|---|---|
+| "1 pão" e "uma maçã" sumiam em silêncio — a TACO **tinha** os alimentos; faltava a conversão de unidade | Tabela ampliada: 1 pão francês = 50g, 1 maçã = 130g, 1 fatia = 25g |
+| "200ml de café preto" (não existe na TACO) desaparecia sem aviso | Regra 13: nenhum item termina fora de "registrado" ou "Não reconheci" |
+| Resposta vazia após registrar (escrita silenciosa) | Rede de segurança FORA do prompt: as tools logam cada registro e o resumo determinístico assume quando o modelo devolve texto vazio |
+| 30-40s sem nenhum feedback visual no chat | Indicador "Registrando no diário…" no front |
+
+Validação v3 no `deepseek/deepseek-v4-flash` (provedor Baidu/fp8): **6/6**, incluindo
+os casos que falharam em produção — e na injection o modelo tentou registrar as
+5000g de whey e foi **bloqueado pela validação tipada da tool**, reportando o
+bloqueio honestamente (defesa em profundidade observada de ponta a ponta).
+Latência: **média 9,5s, máx 15,2s** (vs 30-40s do hy3). Custo medido:
+~US$ 0,001 por mensagem.
+
 ## Modelos e cotas (aprendizados de provedor)
 
 | Modelo | Situação |
@@ -46,7 +64,8 @@ modelo seja convencido a registrar "5000g de whey", a ferramenta recusa.
 | `gemini-2.5-flash` | 404 para contas novas ("no longer available to new users") — apesar de listado como free tier em toda a documentação |
 | `gemini-3.5-flash` | free tier de **20 req/dia**; cada chat consome 2–4 requests no loop de tools — inviável até para desenvolver |
 | `gemini-3.1-flash-lite` | cota folgada; usado na iteração v1→v2; hoje é o provedor **reserva** |
-| `tencent/hy3:free` (OpenRouter) | principal; tool calling estável em pt-BR (9/9); **anunciado como disponível só até 21/07/2026** — a troca é uma env var (`OPENROUTER_MODEL`), e o caminho Gemini fica de reserva |
+| `tencent/hy3:free` (OpenRouter) | foi o principal por um dia: 9/9 na bateria, mas o uso real revelou respostas vazias pós-registro e 30-40s de latência; tinha fim anunciado para 21/07/2026 |
+| `deepseek/deepseek-v4-flash` (OpenRouter, pago) | **principal atual** — US$ 0,077/M entrada (~US$ 0,001/mensagem), 6/6 na bateria v3, 9,5s de latência média. Servido por ~17 provedores; fixamos Baidu (fp8, uptime 99%+) com failover automático (`allow_fallbacks`) |
 
 ## Parâmetros — temperatura (13/07/2026, `tencent/hy3:free`, prompt v2)
 
