@@ -26,6 +26,10 @@ PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "system_promp
 # antecedeu devolvia resposta vazia após registrar (uso real, 13/07/2026) e tinha
 # fim anunciado para 21/07/2026. Trocar via env OPENROUTER_MODEL (nada de código).
 DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4-flash"
+# o mesmo modelo e servido por ~17 provedores com quantizacao/preco/uptime
+# diferentes; baidu = fp8, ~$0.10/M, uptime 99%+ (escolha do usuario, 13/07/2026).
+# allow_fallbacks: se o preferido cair, o OpenRouter roteia para outro provedor
+DEFAULT_OPENROUTER_PROVIDER = "baidu"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 # pinado (nao "-latest"): comportamento reprodutível; 2.5-flash foi recusado
 # para contas novas (404) e o 3.5-flash dá só 20 req/dia no free tier
@@ -249,6 +253,12 @@ def _chat_openrouter(tools: list, day: str, message: str) -> str:
             headers={"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"},
             json={
                 "model": os.environ.get("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL),
+                "provider": {
+                    "order": [
+                        os.environ.get("OPENROUTER_PROVIDER", DEFAULT_OPENROUTER_PROVIDER)
+                    ],
+                    "allow_fallbacks": True,
+                },
                 "messages": messages,
                 "tools": tools_spec(tools),
                 "temperature": TEMPERATURE,

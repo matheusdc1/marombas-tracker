@@ -7,7 +7,13 @@ from app.main import app
 @pytest.fixture(autouse=True)
 def _sem_llm_por_padrao(monkeypatch):
     # chaves reais na maquina nao podem vazar para os testes do mock
-    for var in ("GEMINI_API_KEY", "GEMINI_MODEL", "OPENROUTER_API_KEY", "OPENROUTER_MODEL"):
+    for var in (
+        "GEMINI_API_KEY",
+        "GEMINI_MODEL",
+        "OPENROUTER_API_KEY",
+        "OPENROUTER_MODEL",
+        "OPENROUTER_PROVIDER",
+    ):
         monkeypatch.delenv(var, raising=False)
 
 
