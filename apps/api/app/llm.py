@@ -42,8 +42,11 @@ MAX_TOOL_ROUNDS = 8
 # o lock de escrita do sqlite — um loop lento a mais nao pode travar a API toda
 DEADLINE_S = 120
 # resposta e curta (lista de registros); o teto barra geracao interminavel em
-# temperatura alta — o timeout de leitura do httpx e por chunk, nao total
-MAX_TOKENS = 700
+# temperatura alta — o timeout de leitura do httpx e por chunk, nao total.
+# 2000 e nao 700: o raciocinio de modelos pensantes consome DESTE orcamento —
+# a 700, mensagem complexa morria no meio do pensamento, sem chamar tool alguma
+# ("Vamos analisar a", uso real 13/07/2026); reasoning desligado + folga resolvem
+MAX_TOKENS = 2000
 
 MEAL_TYPES = ("Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia")
 
@@ -263,6 +266,9 @@ def _chat_openrouter(tools: list, day: str, message: str) -> str:
                 "tools": tools_spec(tools),
                 "temperature": TEMPERATURE,
                 "max_tokens": MAX_TOKENS,
+                # extracao com regras explicitas nao precisa de chain-of-thought:
+                # pensar so adiciona latencia/custo e disputa o max_tokens
+                "reasoning": {"enabled": False},
             },
             timeout=min(60, restante),
         )

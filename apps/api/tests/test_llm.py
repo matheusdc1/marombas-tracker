@@ -143,6 +143,7 @@ def test_chat_openrouter_roda_o_loop_de_tools(conn, monkeypatch):
     assert primeira["json"]["model"] == llm.DEFAULT_OPENROUTER_MODEL
     assert primeira["json"]["temperature"] == 0.0
     assert primeira["json"]["max_tokens"] == llm.MAX_TOKENS
+    assert primeira["json"]["reasoning"] == {"enabled": False}
     assert primeira["json"]["provider"] == {"order": ["baidu"], "allow_fallbacks": True}
     assert "<regras>" in primeira["json"]["messages"][0]["content"]
     assert "comi 100g de arroz" in primeira["json"]["messages"][1]["content"]
