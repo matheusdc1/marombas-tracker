@@ -102,9 +102,10 @@ resposta: lista do que foi registrado + "Não reconheci: ..." para o resto
 ### Framework: chamada direta à API, sem LangChain
 
 - **OpenRouter** (principal): API OpenAI-compatível chamada com `httpx` — que já era
-  dependência do projeto — e um **loop de tool calling manual de ~30 linhas** que eu sei
-  explicar linha a linha. LangChain adicionaria abstração exatamente sobre a parte que a
-  avaliação pede para eu dominar; para *uma* chamada com tools, é peso sem ganho.
+  dependência do projeto — e um **loop de tool calling manual de ~30 linhas**. Para este
+  escopo, manter o fluxo explícito reduz dependências e deixa as rodadas de tools visíveis
+  no próprio código. LangChain adicionaria uma camada de abstração sem ganho claro para
+  uma única integração com tools.
 - **Gemini** (reserva): SDK oficial `google-genai`, que faz o loop de tools automaticamente
   a partir de funções Python. Os dois provedores compartilham **as mesmas tools** — a
   diferença fica isolada em duas funções.
@@ -126,24 +127,25 @@ resposta: lista do que foi registrado + "Não reconheci: ..." para o resto
 | `deepseek/deepseek-v4-flash` | **atual**: 6/6 na bateria, ~9,5s de latência média, ~US$ 0,001/mensagem (US$ 5 de créditos ≈ 5.000 registros) |
 
 O mesmo modelo aberto é servido por **~17 provedores de inferência** com quantizações e
-preços diferentes; fixei a **Baidu (fp8**, ~US$ 0,10/M, uptime 99%+) via preferência de
+preços diferentes; a **Baidu (fp8)** (~US$ 0,10/M, uptime 99%+) foi fixada via preferência de
 roteamento com `allow_fallbacks: true` — se ela cair, o OpenRouter roteia para outro
 provedor em vez de derrubar o chat. Modelo e provedor trocam por env
 (`OPENROUTER_MODEL`, `OPENROUTER_PROVIDER`), sem código.
 
-**Local vs. pago, testado de verdade**: rodei a mesma bateria no
-`nemotron-3-nano-30b` (a classe de modelo que caberia num Ollama local): **1/6**. O
+**Local vs. pago, testado na mesma bateria**: o `nemotron-3-nano-30b` (a classe de
+modelo que caberia num Ollama local) obteve **1/6**. O
 raciocínio vazado mostra que ele *entende* as regras (deduz "40kg de cada lado" = 80kg),
 mas despeja o chain-of-thought como resposta e **não chama as tools** — o que se perde
 com modelo pequeno local não é qualidade de texto, é **confiabilidade de tool calling**,
 que é exatamente o que esta aplicação exige.
 
-### Parâmetros (todos com experimento por trás — [tabelas completas](docs/experimentos.md))
+### Parâmetros ([experimentos e decisões completas](docs/experimentos.md))
 
 | Parâmetro | Valor | Por quê |
 |-----------|-------|---------|
 | `temperature` | **0.0** | extração de dados não é tarefa criativa. Medido na mesma bateria: 0.0 → 6/6 · 0.7 → 5/6 · 1.5 → **2/6** com o pior modo de falha possível (registrou no banco com resposta vazia) |
-| `max_tokens` | **700** | a resposta é uma lista curta; em temperatura alta o modelo tagarelava indefinidamente e o timeout de rede **não protege** (é por chunk, não total) — uma requisição chegou a 15 min |
+| `top_p` | **não configurado** | não foi variado na bateria: apenas a temperatura mudou, isolando o efeito de um controle de amostragem por vez. A API usa o padrão do modelo/provedor; não há resultado experimental para justificar outro valor |
+| `max_tokens` | **2000** | no OpenRouter, 700 tokens interrompiam mensagens complexas antes das tools quando modelos com raciocínio consumiam o orçamento. O valor atual dá margem ao loop, enquanto `reasoning` fica desativado; o prazo total continua sendo a proteção contra geração longa |
 | teto de conversa | **120s** | o loop inteiro tem prazo; estourou → `TimeoutError` → rollback + fallback mock. Sem isso, um loop lento segurava o lock de escrita do SQLite e travava a API inteira (aconteceu) |
 | rodadas de tools | **máx. 8** | teto de segurança contra loop infinito de chamadas |
 

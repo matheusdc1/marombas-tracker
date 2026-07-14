@@ -85,15 +85,20 @@ não só na resposta:
 Conclusões:
 - **0.0 é a escolha** — extração de dados não é tarefa criativa; queremos a mesma
   mensagem virando sempre o mesmo registro.
+- **`top_p` não foi variado nem enviado pela aplicação** — a bateria isolou apenas a
+  temperatura para não misturar dois controles de amostragem. Assim, cada
+  modelo/provedor usa seu padrão; não há resultado experimental que justifique fixar
+  outro valor.
 - A degradação em 1.5 não é só "resposta pior": aparece o pior modo de falha
   possível — **registrar no banco sem contar ao usuário** (resposta vazia com
   escrita silenciosa).
 - A 1.5 o modelo também **tagarelava até estourar o tempo**: a primeira tentativa
-  travou uma requisição por >15 minutos. Isso motivou dois guard-rails de
-  engenharia que ficaram no código: `max_tokens=700` (o timeout de leitura do
-  httpx é por chunk, não total — geração interminável nunca estoura timeout) e
-  um teto de 120s na conversa inteira (`DEADLINE_S`), que derruba para o mock
-  com rollback em vez de segurar o lock de escrita do SQLite.
+  travou uma requisição por >15 minutos. Isso motivou o limite de tokens e um teto
+  de 120s na conversa inteira (`DEADLINE_S`), que derruba para o mock com rollback
+  em vez de segurar o lock de escrita do SQLite. O limite começou em 700, mas modelos
+  com raciocínio consumiam esse orçamento antes de chamar as tools em mensagens
+  complexas; por isso o valor atual é **2000**, com `reasoning` desativado no
+  OpenRouter.
 
 ## Comparação de modelos (13/07/2026, temperatura 0, prompt v2, mesma bateria)
 
